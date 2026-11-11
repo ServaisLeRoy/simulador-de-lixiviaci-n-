@@ -987,7 +987,7 @@ const FLOWS = {
       {no:'9', n:'Separación sólido-líquido', e:'Filtro prensa', x:'Separa la solución rica de los sólidos. El agua de lavado se acidifica para que el hierro no precipite.', v:[['Agua de lavado','Acidificada']], o:'Solución rica para recuperar el oro.'}
     ]},
     {title:'Recuperación del oro y regeneración', stages:[
-      {no:'10', n:'Recuperación del oro', e:'Método por definir', x:'Las fuentes consultadas no establecen el método para recuperar el oro de la solución de tiourea en esta planta. Debe definirse con ensayos de laboratorio.', v:[['Método','Por definir mediante ensayos']], o:'Oro en estado sólido.'},
+      {no:'10', n:'Recuperación del oro', e:'Columnas de carbón activado y celda de electrodeposición', x:'El oro disuelto se adsorbe en carbón activado; luego se separa del carbón con una solución de elución y se deposita como metal en una celda electrolítica. Este esquema se ha aplicado en laboratorio a soluciones de tiourea (UNAM; UNI, Perú); su eficiencia con este mineral debe confirmarse con ensayos.', v:[['Adsorción','Carbón activado'],['Elución','Alcohol isopropílico'],['Recuperación final','Electrodeposición']], o:'Obtener el oro en estado metálico para fundirlo.'},
       {no:'11', n:'Regeneración de tiourea', e:'Dosificación de SO₂ o bisulfito', x:'Parte de la tiourea se oxida a disulfuro de formamidina. Agregar SO₂ la devuelve a tiourea antes de que se degrade de forma irreversible, y la solución se recircula.', r:'(NH₂)(NH)CSSC(NH)(NH₂) + SO₂ + 2 H₂O → 2 CS(NH₂)₂ + SO₄²⁻ + 2 H⁺', v:[['Reactivo','SO₂ o bisulfito de sodio']], o:'Reducir el consumo neto de tiourea.'},
       {no:'12', n:'Fundición', e:'Horno de crisol', x:'El producto de oro se funde con fundentes para obtener el lingote, igual que en la cianuración.', v:[['Temperatura','1 150–1 200 °C']], o:'Lingote doré.'}
     ]},
@@ -1007,11 +1007,11 @@ const FLOWS = {
 })();
 const SHORT = {
   cn:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Flotación u oxidación',7:'Tanque agitado TK-701',8:'Tanques TK-801 a 805',9:'Filtro prensa',10:'Filtro clarificador',11:'Vacío y polvo de zinc',12:'Horno de crisol',13:'Reactor agitado',14:'Filtro y depósito HDPE'},
-  tu:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Celdas de flotación',7:'Tanque revestido',8:'Tanques agitados',9:'Filtro prensa',10:'Método por definir',11:'Horno de crisol',12:'Dosificación de SO₂',13:'Reactor con cal',14:'Filtro y depósito HDPE'}
+  tu:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Celdas de flotación',7:'Tanque revestido',8:'Tanques agitados',9:'Filtro prensa',10:'Carbón y electrodeposición',11:'Horno de crisol',12:'Dosificación de SO₂',13:'Reactor con cal',14:'Filtro y depósito HDPE'}
 };
 const ICON_OF = {
   cn:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'clarifier',11:'column',12:'furnace',13:'reactor',14:'press'},
-  tu:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'unknown',11:'furnace',12:'dosing',13:'reactor',14:'press'}
+  tu:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'carbon',11:'furnace',12:'dosing',13:'reactor',14:'press'}
 };
 // íconos lineales en una caja de 64 × 64
 function icon(t){
@@ -1031,6 +1031,7 @@ function icon(t){
     case 'furnace': return `<path ${s} d="M10 16 H54 V54 H10 Z"/><path ${s} d="M22 24 H42 L38 42 H26 Z"/><path ${s} d="M24 60 Q26 56 24 52 M32 60 Q34 56 32 52 M40 60 Q42 56 40 52"/>`;
     case 'reactor': return `<path ${s} d="M14 22 Q14 12 32 12 Q50 12 50 22 V54 H14 Z"/><path ${s} d="M32 2 V44 M24 44 H40"/>`;
     case 'dosing': return `<rect ${s} x="8" y="8" width="22" height="30" rx="3"/><path ${s} d="M19 38 V46 H44 V56"/><rect ${s} x="34" y="20" width="22" height="20" rx="3"/><path ${s} d="M45 40 V46"/>`;
+    case 'carbon': return `<rect ${s} x="6" y="8" width="20" height="48" rx="4"/><circle cx="12" cy="20" r="2" fill="#1F1F1D"/><circle cx="20" cy="28" r="2" fill="#1F1F1D"/><circle cx="12" cy="36" r="2" fill="#1F1F1D"/><circle cx="20" cy="44" r="2" fill="#1F1F1D"/><path ${s} d="M26 32 H34"/><rect ${s} x="34" y="18" width="26" height="38" rx="3"/><path ${s} d="M42 12 V48 M52 12 V48"/>`;
     case 'unknown': return `<rect x="10" y="10" width="44" height="44" rx="8" fill="none" stroke="#6E6D68" stroke-width="2" stroke-dasharray="5 4"/><text x="32" y="42" text-anchor="middle" font-size="26" font-family="Instrument Sans, sans-serif" fill="#6E6D68">?</text>`;
     case 'bar': return `<path d="M10 44 L18 24 H46 L54 44 Z" fill="#E0A448" stroke="#8A5A12" stroke-width="2" stroke-linejoin="round"/>`;
     case 'pile': return `<path d="M6 50 L22 26 H42 L58 50 Z" fill="#E8E7E2" stroke="#1F1F1D" stroke-width="2" stroke-linejoin="round"/><path d="M2 54 H62" stroke="#1F1F1D" stroke-width="3"/>`;
@@ -1048,7 +1049,7 @@ function flowValues(route){
   const v = {1:`${f(Ms,2)} t/h · ≤ 200 mm`,2:`${f(Ms,2)} t/h → 35 mm`,3:`${f(Ms,2)} t/h → ≤ 12 mm`,4:`+ ${f(s.water,2)} m³/h de agua`,5:`${f(s.Q,2)} m³/h de pulpa`,
     9:`${f(s.water,2)} m³/h de solución`,13:`${f(Ms+s.water,2)} t/h de pulpa`,14:`${f(Ms,2)} t/h de sólidos`};
   if (route==='cn'){ Object.assign(v,{6:'Solo si los ensayos lo exigen',7:`Cal ${f(Ms*1.0,2)} kg/h`,8:`NaCN ${f(s.cons*Ms,2)} kg/h`,10:'Turbidez < 5 NTU',11:'Oxígeno disuelto < 0,5 mg/L',12:'1 150–1 200 °C'}); }
-  else { Object.assign(v,{6:'Concentra la pirita',7:`pH ${f(P.pH,1)} · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:'Método por definir',11:'1 150–1 200 °C',12:'Recircula la solución'}); }
+  else { Object.assign(v,{6:'Concentra la pirita',7:`pH ${f(P.pH,1)} · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:'Carbón → electrodeposición',11:'1 150–1 200 °C',12:'Recircula la solución'}); }
   return {v, s, P};
 }
 function flowSVG(route){
