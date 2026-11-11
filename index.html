@@ -238,7 +238,7 @@ section.tab{padding:28px 0 56px}
 
 .flow-ctrl{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px 36px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 24px 14px;margin:0 0 18px}
 .flow-ctrl[hidden]{display:none}
-.flow-sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
+.flow-sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
 .flow-sliders .sl{border-bottom:0}
 .flow-kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:0;border-top:0}
 .flow-kpis .kpi{border-bottom:0;padding:6px 8px}
@@ -252,6 +252,17 @@ section.tab{padding:28px 0 56px}
 .flow-legend i.lg-rec{border-top:2.5px dashed #0072B2}
 .flow-legend i.lg-opt{border-top:2.5px dashed #1F1F1D}
 @media (max-width:980px){ .flow-ctrl{grid-template-columns:1fr} .flow-sliders{grid-template-columns:1fr} .flow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+.modal{position:fixed;inset:0;background:rgba(31,31,29,.38);display:grid;place-items:center;padding:20px;z-index:50}
+.modal[hidden]{display:none}
+.modal-card{position:relative;background:var(--card);color:var(--ink);border-radius:24px;max-width:640px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;padding:30px 32px 28px;box-shadow:0 24px 60px rgba(0,0,0,.18)}
+.modal-card .k{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin:20px 0 8px}
+.modal-card p{margin:0;font-size:16.5px;line-height:1.6}
+.modal-head{display:flex;gap:16px;align-items:center;padding-right:40px}
+.modal-head h3{font-size:28px;margin-top:2px}
+.modal-x{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);font-size:24px;line-height:1;cursor:pointer;color:var(--ink)}
+.modal-x:hover{background:var(--ink);color:var(--paper)}
+body.modal-open{overflow:hidden}
 footer.bot{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 0 40px;gap:12px}
 footer .f-brand{font-family:var(--display);font-weight:600;font-size:18px}
 footer .f-next{background:none;border:0;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer;color:var(--ink)}
@@ -405,7 +416,7 @@ ol.refs li{margin:0 0 10px}
 <section class="tab" id="tab-rutas">
 <div class="intro"><div>  
   <h1 class="hero">Rutas de proceso</h1>
-</div><div>  <p class="lede">El diagrama sigue el mineral desde la mina hasta el lingote de oro. Las flechas negras son el flujo principal y las azules discontinuas, lo que regresa a una etapa anterior. Ajusta la alimentación y verás cómo cambian los flujos de cada equipo.</p></div></div>
+</div><div>  <p class="lede">El diagrama sigue el mineral desde la mina hasta el lingote de oro. Las flechas negras son el flujo principal y las azules discontinuas, lo que regresa a una etapa anterior. Ajusta la alimentación de mineral y el porcentaje de sólidos para ver cómo cambian los flujos de cada equipo.</p></div></div>
   <div class="ctrl-row" style="margin-top:30px">
     <label for="route-sel" class="small">Flujograma</label>
     <select id="route-sel" class="sel">
@@ -419,6 +430,7 @@ ol.refs li{margin:0 0 10px}
     <div class="kpis flow-kpis" id="flow-kpis"></div>
   </div>
   <div id="flowsheet"></div>
+  <div id="stage-modal" class="modal" hidden></div>
 </section>
 
 <!-- ===================== CINÉTICA ===================== -->
@@ -1035,8 +1047,8 @@ function flowValues(route){
   const P = params(route), s = simulate(route, P), Ms = s.Ms;
   const v = {1:`${f(Ms,2)} t/h · ≤ 200 mm`,2:`${f(Ms,2)} t/h → 35 mm`,3:`${f(Ms,2)} t/h → ≤ 12 mm`,4:`+ ${f(s.water,2)} m³/h de agua`,5:`${f(s.Q,2)} m³/h de pulpa`,
     9:`${f(s.water,2)} m³/h de solución`,13:`${f(Ms+s.water,2)} t/h de pulpa`,14:`${f(Ms,2)} t/h de sólidos`};
-  if (route==='cn'){ Object.assign(v,{6:'Solo si los ensayos lo exigen',7:`Cal ${f(Ms*1.0,2)} kg/h`,8:`NaCN ${f(s.cons*Ms,2)} kg/h`,10:'Turbidez < 5 NTU',11:`${f(s.AuDis,1)} g/h de oro`,12:`${f(s.AuGd,0)} g/d de oro`}); }
-  else { Object.assign(v,{6:'Concentra la pirita',7:`pH ${f(P.pH,1)} · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:`${f(s.AuDis,1)} g/h de oro`,11:`${f(s.AuGd,0)} g/d de oro`,12:'Recircula la solución'}); }
+  if (route==='cn'){ Object.assign(v,{6:'Solo si los ensayos lo exigen',7:`Cal ${f(Ms*1.0,2)} kg/h`,8:`NaCN ${f(s.cons*Ms,2)} kg/h`,10:'Turbidez < 5 NTU',11:'Oxígeno disuelto < 0,5 mg/L',12:'1 150–1 200 °C'}); }
+  else { Object.assign(v,{6:'Concentra la pirita',7:`pH ${f(P.pH,1)} · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:'Método por definir',11:'1 150–1 200 °C',12:'Recircula la solución'}); }
   return {v, s, P};
 }
 function flowSVG(route){
@@ -1117,26 +1129,39 @@ function renderFlow(){
   document.getElementById('flow-kpis').innerHTML = `
     <div class="kpi"><div class="v">${f(s.Ms,2)}</div><div class="l">t/h de mineral</div></div>
     <div class="kpi"><div class="v">${f(s.Q,2)}</div><div class="l">m³/h de pulpa</div></div>
-    <div class="kpi"><div class="v">${f(s.R*100,1)} %</div><div class="l">de oro recuperado</div></div>
-    <div class="kpi"><div class="v">${f(s.AuGd,0)}</div><div class="l">g/d de oro</div></div>`;
-  let det = '';
-  if (openStage && openStage.startsWith(r+'-')){
-    const st = flatStages(r)[openStage.split('-')[1]];
-    det = `<div class="detail">
-      <h3><span class="no">${st.no}</span>${st.n}<span class="small" style="font-family:var(--body);font-weight:400;margin-left:6px">${SHORT[r][st.no]}</span></h3>
-      <div class="d-main"><div class="k">Qué hace y por qué funciona</div><p>${st.x}</p>${st.r?`<div class="k" style="margin-top:16px">Reacción</div><div class="rxn">${st.r}</div>`:''}</div>
-      <div><div class="k">Variables controladas</div><dl class="vars">${st.v.map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl></div>
-      <div><div class="k">Objetivo</div><p>${st.o}</p></div>
-    </div>`;
-  }
+    <div class="kpi"><div class="v">${f(s.water,2)}</div><div class="l">m³/h de agua</div></div>
+    <div class="kpi"><div class="v">${f(s.LS,2)}</div><div class="l">m³ de agua por t de mineral</div></div>`;
   el.innerHTML = `<div class="flow-legend"><span><i class="lg-main"></i>Flujo principal</span><span><i class="lg-rec"></i>Retorno o recirculación</span><span><i class="lg-opt"></i>Etapa opcional</span><span class="small">Pulsa un equipo para ver su detalle.</span></div>
-    <div class="flow-wrap">${flowSVG(r)}</div><div id="flow-detail">${det}</div>`;
+    <div class="flow-wrap">${flowSVG(r)}</div>`;
+  renderStageModal(r);
   el.querySelectorAll('.fnode').forEach(g=>{
-    const go = ()=>{ const k = `${r}-${g.dataset.no}`; openStage = openStage===k ? null : k; renderFlow(); if (openStage) document.getElementById('flow-detail').scrollIntoView({behavior:'smooth', block:'nearest'}); };
+    const go = ()=>{ const k = `${r}-${g.dataset.no}`; openStage = openStage===k ? null : k; lastFocus = g; renderFlow(); };
     g.addEventListener('click', go); g.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
   });
 }
 document.getElementById('route-sel').addEventListener('change', ()=>{ openStage=null; renderFlow(); });
+let lastFocus = null;
+function closeStage(){ openStage = null; renderFlow(); if (lastFocus){ const n = document.querySelector(`.fnode[data-no="${lastFocus.dataset.no}"]`); n && n.focus(); } }
+function renderStageModal(r){
+  const m = document.getElementById('stage-modal');
+  if (!(openStage && openStage.startsWith(r+'-'))){ m.hidden = true; document.body.classList.remove('modal-open'); return; }
+  const st = flatStages(r)[openStage.split('-')[1]];
+  m.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="modal-x" type="button" aria-label="Cerrar">×</button>
+    <div class="modal-head"><svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">${icon(ICON_OF[r][st.no])}</svg>
+      <div><div class="small">Etapa ${st.no} · ${SHORT[r][st.no]}</div><h3 id="modal-title">${st.n}</h3></div></div>
+    <div class="k">Qué hace y por qué funciona</div><p>${st.x}</p>
+    ${st.r?`<div class="k">Reacción</div><div class="rxn">${st.r}</div>`:''}
+    <div class="k">Variables controladas</div><dl class="vars">${st.v.map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>
+    <div class="k">Objetivo</div><p>${st.o}</p>
+  </div>`;
+  m.hidden = false; document.body.classList.add('modal-open');
+  m.querySelector('.modal-x').addEventListener('click', closeStage);
+  m.querySelector('.modal-x').focus();
+}
+document.getElementById('stage-modal').addEventListener('click', e=>{ if (e.target.id==='stage-modal') closeStage(); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && openStage) closeStage(); });
+
 
 
 // ===================== GRÁFICAS =====================
@@ -1418,7 +1443,7 @@ mountSliders('common-sliders','sim', Object.keys(SPEC.common).map(k=>['common',k
 mountSliders('cn-sliders','sim', Object.keys(SPEC.cn).map(k=>['cn',k]));
 mountSliders('tu-sliders','sim', Object.keys(SPEC.tu).map(k=>['tu',k]));
 mountSliders('kin-sliders','kin', [['kin','Ea'],['kin','Z']]);
-mountSliders('flow-sliders','flow', [['common','feed','Mineral alimentado a trituración'],['common','ley'],['common','sol']]);
+mountSliders('flow-sliders','flow', [['common','feed','Mineral alimentado a trituración'],['common','sol']]);
 mountSliders('kin-op-sliders','kin', [['common','p80'],['cn','C','NaCN (cianuración)'],['cn','pH','pH (cianuración)'],['cn','T','Temperatura (cianuración)'],['tu','C','Tiourea'],['tu','T','Temperatura (tiourea)'],['common','alt']]);
 document.getElementById('scen-sel').addEventListener('change', e=>{ S.scen=e.target.value; schedule(); });
 document.getElementById('model-sel').addEventListener('change', e=>{ S.model=e.target.value; schedule(); });
