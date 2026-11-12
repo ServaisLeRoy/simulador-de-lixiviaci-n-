@@ -638,6 +638,7 @@ ol.refs li{margin:0 0 10px}
     </aside>
     <div class="main-col">
       <div class="grid g3" id="eco-kpis"></div>
+      <div class="card" id="eco-pay" style="margin-top:18px"></div>
       <div class="card" style="margin-top:18px">
         <h3>Costo de calentar la pulpa</h3>
         <p class="small" style="margin:6px 0 0">Elige la zona y cuántos grados quieres subir la pulpa sobre la temperatura ambiente. El costo de calentar se suma cada día al costo de operación y cambia el VAN, la TIR y el costo por onza.</p>
@@ -1497,7 +1498,7 @@ function renderKin(){
 const ECO_DEF = {
   price:{lab:'Precio del oro', u:'US$/oz', v:4100, s:'Spot de noviembre de 2026', show:1},
   royalty:{lab:'Regalía', u:'%', v:4, s:'Sobre el 80 % del precio internacional', show:1},
-  upstream:{lab:'Costo de mina, conminución y recuperación final', u:'US$/t', v:70, s:'Costo de operación fuera del circuito de lixiviación', show:1},
+  upstream:{lab:'Costo de mina, conminución y recuperación final', u:'US$/t', v:70, s:'Fuera del circuito de lixiviación. Sin dato verificado para minas pequeñas de la zona: ajústalo si lo conoces', show:1},
   elec:{lab:'Energía eléctrica', u:'US$/MWh', v:224, s:'', show:1},
   pNaCN:{lab:'Precio del NaCN', u:'US$/t', v:2500, s:'', show:1},
   pLime:{lab:'Precio de la cal (85 % CaO)', u:'US$/t', v:390, s:'', show:1},
@@ -1529,7 +1530,7 @@ function mountEco(){
 }
 const money = x => (x<0?'−':'') + 'US$ ' + f(Math.abs(x),0);
 const kmoney = x => (x<0?'−':'') + 'US$ ' + (Math.abs(x)>=1e6? f(Math.abs(x)/1e6,2)+' M' : f(Math.abs(x)/1e3,0)+' k');
-const yrs = x => x===null? 'No se recupera en la vida útil' : x<1 ? f(x*12,1)+' meses' : f(x,1)+' años';
+const yrs = x => x===null? 'No se recupera en la vida útil' : x<1 ? `${f(x*12,1)} meses (${f(x,2)} años)` : f(x,1)+' años';
 function renderEco(){
   const E = ecoParams();
   const R = {}; for (const route of ['cn','tu']){ const P = params(route); const s = simulate(route,P); R[route] = {P, s, e: economics(route, P, E, s)}; }
@@ -1553,6 +1554,26 @@ function renderEco(){
       return `<tr><td style="white-space:nowrap"><span class="dot" style="background:${COL[r]}"></span>${lab}</td><td class="r">${f(dT,1)} °C · ${f(e.heatKW,1)} kW</td><td class="r"><b>${money(day)}</b></td><td class="r">${money(e.heatCost)}</td><td class="r">${f(s0.R*100,1)} → ${f(R[r].s.R*100,1)} %</td><td class="r">${kmoney(e0.npv)} → ${kmoney(e.npv)}</td></tr>`; };
     document.getElementById('eco-heat').innerHTML = `<div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Sube · potencia</th><th class="r">Costo por día</th><th class="r">Costo al año</th><th class="r">Recuperación</th><th class="r">VAN</th></tr></thead><tbody>${hr('Cianuración','cn')}${hr('Tiourea','tu')}</tbody></table></div>
       <p class="small" style="margin-top:8px">Energía para calentar el mineral y el agua que entran: ${f(E.days,0)} días al año, electricidad a ${money(E.elec)}/MWh y rendimiento del ${f(E.heatEff*100,0)} %. Las flechas comparan sin calentar → con calentamiento. No incluye pérdidas de calor de los tanques, así que es un costo mínimo.</p>`; }
+  { const step = (lab, e) => { const yrs0 = e.pay;
+      const rows = [
+        ['Ingresos por venta de oro', e.revenue, `${f(e.oz,0)} oz × ${money(E.price)}`],
+        ['− Regalías', -e.royalty, `${f(E.royalty*100,0)} % sobre el ${f(E.royaltyBase*100,0)} % de los ingresos`],
+        ['− Costos de operación (OPEX)', -e.opex, 'incluye mina, reactivos, energía, personal, residuos'],
+        ['= Utilidad operativa (EBITDA)', e.ebitda, ''],
+        ['− Impuesto de renta', -e.tax, `${f(E.tax*100,0)} % × (EBITDA − depreciación de ${money(e.capex/E.life)})`],
+        ['= Flujo de caja de cada año', e.cf, `${money(e.cf/12)} por mes`]];
+      const yrsTxt = yrs0===null ? 'no se recupera dentro de la vida útil' : `${money(e.capex)} ÷ ${money(e.cf)} = <b>${f(yrs0,2)} años</b> = <b>${f(yrs0*12,1)} meses</b> (≈ ${f(yrs0*E.days,0)} días de operación)`;
+      let acc = -e.capex; const yrRows = [`<tr><td>0</td><td class="r">${money(-e.capex)}</td><td class="r">${money(acc)}</td></tr>`];
+      for (let y=1; y<=Math.min(E.life,3); y++){ acc += e.cf; yrRows.push(`<tr><td>${y}</td><td class="r">${money(e.cf)}</td><td class="r">${money(acc)}</td></tr>`); }
+      return `<div><h4 style="margin:0 0 6px"><span class="dot" style="background:${COL[lab==='Cianuración'?'cn':'tu']}"></span>${lab}</h4>
+        <div class="tbl-wrap" style="background:none"><table>${rows.map(([l,v,n])=>`<tr${l.startsWith('=')?' class="strong"':''}><td>${l}</td><td class="r">${money(v)}</td><td class="small">${n}</td></tr>`).join('')}
+        <tr class="strong"><td>Inversión total (CAPEX)</td><td class="r">${money(e.capex)}</td><td class="small">circuito ${money(e.capexCircuit)} + resto de planta ${money(e.capexExtra)} + otras ${money(e.capexOther)}</td></tr></table></div>
+        <p style="margin:10px 0 6px">Recuperación de la inversión: ${yrsTxt}.</p>
+        <div class="tbl-wrap" style="background:none"><table><thead><tr><th>Año</th><th class="r">Flujo del año</th><th class="r">Acumulado</th></tr></thead><tbody>${yrRows.join('')}</tbody></table></div></div>`; };
+    document.getElementById('eco-pay').innerHTML = `<h3>Cómo se calcula la recuperación de la inversión</h3>
+      <p class="small" style="margin:6px 0 14px">Se resta a los ingresos todo lo que se paga cada año; lo que queda es el flujo de caja. La inversión se recupera cuando la suma de esos flujos la iguala: inversión ÷ flujo anual, porque el flujo es el mismo cada año. El año 0 es la construcción; la producción empieza en el año 1.</p>
+      <div class="grid g2">${step('Cianuración', a)}${step('Tiourea', b)}</div>
+      <p class="small" style="margin-top:12px">El plazo es corto porque aquí solo se invierte en la planta de beneficio, mientras que la mina se paga como costo por tonelada (${money(E.upstream)}/t) y el mineral tiene ${f(S.common.ley,1)} g/t. Si se suma la inversión de la mina, licencias y capital de trabajo en «Otras inversiones», o si el costo de mina por tonelada es mayor, el plazo crece.</p>`; }
   const sec = t => ['§', t];
   const rows = [
     sec('1. Producción'),
