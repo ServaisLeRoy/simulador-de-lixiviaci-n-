@@ -302,6 +302,15 @@ body.modal-open{overflow:hidden}
 .an-glow{animation:glow 3s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){ .an-float,.an-down,.an-up,.an-glow{animation:none} }
 .studies .card h3 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1F1F1D;color:#F7F7F5;font-size:14px;margin-right:8px;vertical-align:2px}
+
+.tkg{cursor:pointer}.tkg:focus{outline:none}.tkg:hover path,.tkg:focus-visible path{stroke:#8A5A12;stroke-width:3}
+.tk-tip{position:absolute;z-index:5;width:290px;background:#1F1F1D;color:#F7F7F5;border-radius:14px;padding:12px 14px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none}
+.tk-tip b{font-family:'Instrument Sans',sans-serif;font-size:16px}
+.tk-tip div{display:flex;justify-content:space-between;gap:10px;margin-top:5px;border-top:1px solid rgba(255,255,255,.12);padding-top:5px}
+.tk-tip span{color:#cfcdc6}.tk-tip em{font-style:normal;font-weight:700;white-space:nowrap}
+.heat-ctrl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:10px 0 14px}
+@media (max-width:980px){ .heat-ctrl{grid-template-columns:1fr} }
+.heat-ctrl input[type=range]{width:100%}
 footer.bot{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 0 40px;gap:12px}
 footer .f-brand{font-family:var(--display);font-weight:600;font-size:18px}
 footer .f-next{background:none;border:0;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer;color:var(--ink)}
@@ -337,7 +346,7 @@ ol.refs li{margin:0 0 10px}
       <p class="hero-sub">Cianuración y tiourea como alternativa</p>
     </div>
     <div>
-      <p class="lede">Este simulador muestra cómo se extrae el oro de la roca disolviéndolo en una solución química, y compara dos reactivos: el cianuro, que es el método más usado en el mundo, y la tiourea, una alternativa que trabaja en medio ácido.</p>
+      <p class="lede">Este simulador muestra cómo se extrae el oro de la roca disolviéndolo en una solución química, y presenta dos reactivos: el cianuro, que trabaja en medio alcalino con oxígeno, y la tiourea, que trabaja en medio ácido con hierro férrico. Ambos se calculan con el mismo mineral y las mismas condiciones, para ver cómo cambia cada uno.</p>
       <ol class="howto">
         <li><b>Rutas</b> explica cada etapa de la planta.</li>
         <li><b>Cinética</b> muestra qué tan rápido se disuelve el oro.</li>
@@ -359,8 +368,8 @@ ol.refs li{margin:0 0 10px}
         <li><div><b>El oro está dentro de la pirita</b><span>Entre el 80 y el 90 % del oro del distrito va asociado a ella; por eso hay que moler fino u oxidar antes de lixiviar.</span></div></li>
         <li><div><b>7,0 g de oro por tonelada</b><span>Es la ley base del simulador; en el distrito se han medido de 1,5 a 26 g/t.</span></div></li>
         <li><div><b>Una mina pequeña mueve unas 20 t/d</b><span>Es la capacidad base de la planta que se simula.</span></div></li>
-        <li><div><b>En mineral sulfurado, el cianuro se queda corto</b><span>Recuperó 46 % en 35 h; la tiourea, 96 % en 10 h, aunque gasta más reactivo.</span></div></li>
-        <li><div><b>La altura resta oxígeno</b><span>En California el agua toma cerca de una quinta parte menos oxígeno que al nivel del mar, y eso frena la cianuración.</span></div></li>
+        <li><div><b>Dos rutas, dos químicas</b><span>Cianuro: pH 10,5–11 y oxígeno. Tiourea: pH 1,4–1,8 e ion férrico. Cada una tiene su velocidad, su consumo de reactivo y sus costos.</span></div></li>
+        <li><div><b>La altura resta oxígeno</b><span>En California el agua toma cerca de una quinta parte menos oxígeno que al nivel del mar, ; eso influye en la cianuración, que usa oxígeno. La tiourea no lo usa.</span></div></li>
       </ul>
     </div>
   </div>
@@ -413,7 +422,7 @@ ol.refs li{margin:0 0 10px}
         <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1F1F1D"/></marker></defs>
         <text x="345" y="100" font-size="12" fill="#6E6D68" text-anchor="end" font-family="Manrope, sans-serif">pH 10,5–11</text>
       </svg>
-      <figcaption><b>Cianuración.</b> El cianuro y el oxígeno viajan hasta el oro y lo convierten en un compuesto soluble. El paso lento es ese viaje por difusión, y casi siempre lo limita el oxígeno disuelto.</figcaption>
+      <figcaption><b>Cianuración.</b> El cianuro y el oxígeno viajan hasta el oro y lo convierten en un compuesto soluble. El paso lento es ese viaje por difusión, que depende del oxígeno disuelto. El reactivo es estable y se consume poco, pero es muy tóxico.</figcaption>
     </figure>
     <figure class="card fig">
       <svg viewBox="0 0 360 220" role="img" aria-label="Disolución de oro con tiourea y ion férrico">
@@ -433,19 +442,19 @@ ol.refs li{margin:0 0 10px}
         <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#B4613A"/></marker></defs>
         <text x="345" y="100" font-size="12" fill="#6E6D68" text-anchor="end" font-family="Manrope, sans-serif">pH 1,4–1,8</text>
       </svg>
-      <figcaption><b>Tiourea.</b> Funciona en medio ácido y usa hierro férrico en lugar de oxígeno. Disuelve el oro más rápido y es menos tóxica, pero se descompone y se consume en mayor cantidad.</figcaption>
+      <figcaption><b>Tiourea.</b> Funciona en medio ácido y usa hierro férrico en lugar de oxígeno. Es menos tóxica que el cianuro, pero se descompone con facilidad y su consumo de reactivo es mayor.</figcaption>
     </figure>
   </div>
 
   <h2 class="sec-title">Lo que dicen los estudios del distrito</h2>
-  <p class="sec-sub">Seis hallazgos en orden: de cómo se formó el oro a qué hacer para recuperarlo.</p>
+  <p class="sec-sub">Seis hallazgos en orden: cómo se formó el oro, qué contiene el mineral y qué se ha medido al lixiviarlo con cada reactivo.</p>
   <div class="hrow h3 studies">
     <div class="card"><h3><span class="n">1</span>Cómo se formó</h3><p>Fluidos calientes (143–328 °C) subieron por fracturas hace 2,6 a 1,6 millones de años y dejaron vetas con oro y plata.</p><p class="src">Andean Geology, 2024</p></div>
     <div class="card"><h3><span class="n">2</span>Dónde quedó el oro</h3><p>Sobre todo dentro de la pirita, en granos de 1 a 40 micras, más finos que un cabello. Una parte está libre en fracturas.</p><p class="src">Andean Geology, 2024 · Boletín de Geología, UIS</p></div>
     <div class="card"><h3><span class="n">3</span>Qué trae el mineral</h3><p>Una muestra de California tenía 6,2 % de pirita, 1,5 % de enargita y 0,25 % de arsénico. Solo el 56 % del oro estaba libre.</p><p class="src">Carrillo, Delgado y Córdoba</p></div>
-    <div class="card"><h3><span class="n">4</span>Por eso el cianuro rinde poco</h3><p>Con mineral oxidado, el cianuro recupera 85–88 %; con el sulfurado, solo 46–50 %, porque no alcanza el oro encerrado.</p><p class="src">Carrillo, Delgado y Córdoba</p></div>
-    <div class="card"><h3><span class="n">5</span>Dos salidas</h3><p>La tiourea recuperó 96 % en 10 h, pero gastó 23 kg/t. Oxidar antes la pirita con bacterias llevó el cianuro de ~75 % a 93 %.</p><p class="src">Carrillo, Delgado y Córdoba · Gamboa Rueda, UIS</p></div>
-    <div class="card"><h3><span class="n">6</span>Y cuidar el agua</h3><p>Los sedimentos del río Suratá tienen hasta 484 mg/kg de arsénico por la minería. Es un dato ambiental, no la composición del mineral.</p><p class="src">Estudio de arsénico en el páramo de Santurbán (FAO AGRIS)</p></div>
+    <div class="card"><h3><span class="n">4</span>Ensayos con cianuro</h3><p>Recuperó 85–88 % en mineral oxidado y 46–50 % en sulfurado. Oxidar antes la pirita con bacterias llevó un mineral del distrito de ~75 % a 93 %.</p><p class="src">Carrillo, Delgado y Córdoba · Gamboa Rueda, UIS</p></div>
+    <div class="card"><h3><span class="n">5</span>Ensayos con tiourea</h3><p>En el mineral sulfurado recuperó 96 % en 10 h, con un consumo de 23 kg/t de tiourea. Son ensayos de laboratorio en un solo mineral.</p><p class="src">Carrillo, Delgado y Córdoba</p></div>
+    <div class="card"><h3><span class="n">6</span>El agua del entorno</h3><p>Los sedimentos del río Suratá tienen hasta 484 mg/kg de arsénico por la minería. Es un dato ambiental, no la composición del mineral.</p><p class="src">Estudio de arsénico en el páramo de Santurbán (FAO AGRIS)</p></div>
   </div>
 </section>
 
@@ -584,7 +593,7 @@ ol.refs li{margin:0 0 10px}
     </aside>
     <div class="main-col">
       <div class="kpis tk-kpis" id="tk-kpis"></div>
-      <div class="flow-wrap" style="margin-top:14px"><div id="tk-svg"></div></div>
+      <div class="flow-wrap" style="margin-top:14px;overflow:visible"><p class="small" style="margin:4px 6px 0">Pasa el cursor (o toca) un tanque para ver lo que ocurre en él.</p><div id="tk-svg" style="position:relative"></div></div>
       <div class="chart-card" style="margin-top:18px"><h4>Cómo avanza la disolución tanque a tanque</h4><p class="small">Barras: oro recuperado acumulado a la salida de cada tanque. Línea: oro disuelto en la solución.</p><div class="chart-box"><canvas id="ch-tanks"></canvas></div></div>
     </div>
   </div>
@@ -603,7 +612,16 @@ ol.refs li{margin:0 0 10px}
     </aside>
     <div class="main-col">
       <div class="grid g3" id="eco-kpis"></div>
-      <div class="card" id="eco-heat" style="margin-top:18px"></div>
+      <div class="card" style="margin-top:18px">
+        <h3>Costo de calentar la pulpa</h3>
+        <p class="small" style="margin:6px 0 0">Elige la zona y cuántos grados quieres subir la pulpa sobre la temperatura ambiente. El costo de calentar se suma cada día al costo de operación y cambia el VAN, la TIR y el costo por onza.</p>
+        <div class="heat-ctrl">
+          <div><label class="grp-title" for="eh-zone" style="margin-top:0">Zona</label><select class="sel full zone-sel" id="eh-zone" aria-label="Zona minera"></select><p class="small" id="eh-amb" style="margin:6px 0 0"></p></div>
+          <div class="sl" style="border:0;padding:0"><div class="sl-top"><label class="sl-lab" for="eh-cn"><span class="dot" style="background:var(--cn)"></span>Cianuración: subir</label><span class="sl-val"><b id="eh-cn-v">0</b><i>°C</i></span></div><div class="track"><div class="rail"></div><input type="range" id="eh-cn" min="0" max="30" step="0.5" value="0"></div><div class="sl-meta"><span id="eh-cn-t"></span></div></div>
+          <div class="sl" style="border:0;padding:0"><div class="sl-top"><label class="sl-lab" for="eh-tu"><span class="dot" style="background:var(--tu)"></span>Tiourea: subir</label><span class="sl-val"><b id="eh-tu-v">0</b><i>°C</i></span></div><div class="track"><div class="rail"></div><input type="range" id="eh-tu" min="0" max="30" step="0.5" value="0"></div><div class="sl-meta"><span id="eh-tu-t"></span></div></div>
+        </div>
+        <div id="eco-heat"></div>
+      </div>
       <div class="tbl-wrap" style="margin-top:18px"><table id="eco-table"></table></div>
       <div class="grid g2" style="margin-top:18px">
         <div class="chart-card"><h4>Flujo de caja acumulado</h4><p class="small">Dinero acumulado año a año, en millones de US$. Empieza negativo por la inversión; donde cruza el cero, la inversión ya se recuperó.</p><div class="chart-box"><canvas id="ch-eco-cum"></canvas></div></div>
@@ -1486,11 +1504,18 @@ function renderEco(){
     kp('Valor actual neto (VAN)', a.npv, b.npv, kmoney, `Ganancia total traída a hoy, con ${f(E.rate*100,0)} % de descuento en ${E.life} años`) +
     kp('Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,1)+' %', 'Rentable si supera la tasa de descuento') +
     kp('Recuperación de la inversión', a.pay, b.pay, yrs, 'Años hasta recuperar lo invertido');
-  { const z = zoneOf(S.env.zone), hr = (lab, r) => { const P=R[r].P, e=R[r].e, dT=P.T-P.Tamb;
-      return `<tr><td><span class="dot" style="background:${COL[r]}"></span>${lab}</td><td class="r">${f(P.T,1)} °C</td><td class="r">${f(Math.max(0,dT),1)} °C</td><td class="r">${f(e.heatKW,1)} kW</td><td class="r">${f(e.heatKW*24*E.days/1000,0)} MWh</td><td class="r">${money(e.heatCost)}</td></tr>`; };
-    document.getElementById('eco-heat').innerHTML = `<h3>Costo de calentar la pulpa</h3>
-      <p class="small" style="margin:6px 0 12px">Zona: <b>${z?z.n:'personalizada'}</b> · temperatura ambiente ${f(S.env.Tamb,1)} °C. Si la pulpa trabaja más caliente que el ambiente, hay que calentar el mineral y el agua que entran cada hora. Se cobra como electricidad a ${money(E.elec)}/MWh con un rendimiento del ${f(E.heatEff*100,0)} %; no incluye pérdidas de calor de los tanques.</p>
-      <div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Pulpa</th><th class="r">Sobre el ambiente</th><th class="r">Potencia</th><th class="r">Energía al año</th><th class="r">Costo al año</th></tr></thead><tbody>${hr('Cianuración','cn')}${hr('Tiourea','tu')}</tbody></table></div>`; }
+  { for (const r of ['cn','tu']){ const d = Math.max(0, S[r].T - S.env.Tamb), inp = document.getElementById('eh-'+r);
+      inp.max = Math.min(30, 60 - S.env.Tamb); if (document.activeElement!==inp) inp.value = d;
+      document.getElementById('eh-'+r+'-v').textContent = f(d,1);
+      document.getElementById('eh-'+r+'-t').textContent = `Pulpa a ${f(S[r].T,1)} °C`; }
+    const z = zoneOf(S.env.zone);
+    document.getElementById('eh-amb').textContent = `${z?z.n+' · ':''}temperatura ambiente ${f(S.env.Tamb,1)} °C`;
+    const hr = (lab, r) => { const P=R[r].P, e=R[r].e, dT=Math.max(0,P.T-P.Tamb);
+      const P0 = Object.assign({}, P, {T:P.Tamb}), s0 = simulate(r, P0), e0 = economics(r, P0, E, s0);
+      const day = e.heatCost/E.days;
+      return `<tr><td style="white-space:nowrap"><span class="dot" style="background:${COL[r]}"></span>${lab}</td><td class="r">${f(dT,1)} °C · ${f(e.heatKW,1)} kW</td><td class="r"><b>${money(day)}</b></td><td class="r">${money(e.heatCost)}</td><td class="r">${f(s0.R*100,1)} → ${f(R[r].s.R*100,1)} %</td><td class="r">${kmoney(e0.npv)} → ${kmoney(e.npv)}</td></tr>`; };
+    document.getElementById('eco-heat').innerHTML = `<div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Sube · potencia</th><th class="r">Costo por día</th><th class="r">Costo al año</th><th class="r">Recuperación</th><th class="r">VAN</th></tr></thead><tbody>${hr('Cianuración','cn')}${hr('Tiourea','tu')}</tbody></table></div>
+      <p class="small" style="margin-top:8px">Energía para calentar el mineral y el agua que entran: ${f(E.days,0)} días al año, electricidad a ${money(E.elec)}/MWh y rendimiento del ${f(E.heatEff*100,0)} %. Las flechas comparan sin calentar → con calentamiento. No incluye pérdidas de calor de los tanques, así que es un costo mínimo.</p>`; }
   const sec = t => ['§', t];
   const rows = [
     sec('1. Producción'),
@@ -1504,7 +1529,8 @@ function renderEco(){
     sec('3. Costos anuales de operación'),
     ['Reactivos', a.reagents, b.reagents, money],
     ['Energía', a.energy, b.energy, money],
-    ['Calentamiento de la pulpa', a.heatCost, b.heatCost, money],
+    ['Calentamiento de la pulpa (al año)', a.heatCost, b.heatCost, money],
+    ['Calentamiento de la pulpa (por día)', a.heatCost/E.days, b.heatCost/E.days, money],
     ['Tratamiento de residuos', a.waste, b.waste, money],
     ['Personal, mantenimiento y laboratorio', a.personnel+a.maint+a.lab, b.personnel+b.maint+b.lab, money],
     ['Mina, conminución y recuperación final', a.upstream, b.upstream, money],
@@ -1607,7 +1633,8 @@ function renderTanks(){
   out.forEach((o,i)=>{
     const x = xs(i), y = ys(i), lvl = y + th*0.1;
     const t = o.R/Math.max(0.01,s.Rinf);
-    g += `<g>
+    g += `<g class="tkg" data-i="${i}" tabindex="0" role="button" aria-label="TK-${800+o.i}: ver detalle">
+      <rect x="${x-8}" y="${y-64}" width="${tw+16}" height="${th+72}" fill="transparent"/>
       <path d="M${x} ${y} V ${y+th-10} Q ${x} ${y+th} ${x+10} ${y+th} H ${x+tw-10} Q ${x+tw} ${y+th} ${x+tw} ${y+th-10} V ${y}" fill="#F7F7F5" stroke="#1F1F1D" stroke-width="2"/>
       <rect x="${x+2}" y="${lvl}" width="${tw-4}" height="${th-(lvl-y)-2}" rx="6" fill="${col(t)}" opacity=".85"/>
       <line x1="${x+tw/2}" y1="${y-26}" x2="${x+tw/2}" y2="${y+th*0.78}" stroke="#1F1F1D" stroke-width="2"/>
@@ -1616,9 +1643,6 @@ function renderTanks(){
       <line x1="${x+tw*0.75}" y1="${ys(N-1)+th+30}" x2="${x+tw*0.75}" y2="${y+th-6}" stroke="#0072B2" stroke-width="1.5"/>
       <text x="${x+tw/2}" y="${y-54}" text-anchor="middle" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">TK-${800+o.i}</text>
       <text x="${x+tw/2}" y="${y+th*0.45}" text-anchor="middle" paint-order="stroke" stroke="#F7F7F5" stroke-width="5" font-size="${Math.max(15,Math.min(24, tw/4))}" font-weight="700" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">${f(o.R*100,0)} %</text>
-      <text x="${x+tw/2}" y="${ys(N-1)+th+84}" text-anchor="middle" font-size="${N>6?13:16}" font-family="Manrope, sans-serif" fill="#6E6D68">τ acum. ${f(o.tcum,1)} h</text>
-      <text x="${x+tw/2}" y="${ys(N-1)+th+106}" text-anchor="middle" font-size="${N>6?13:16}" font-family="Manrope, sans-serif" fill="#1F1F1D">${f(o.AuSol,2)} mg/L en solución</text>
-      <text x="${x+tw/2}" y="${ys(N-1)+th+128}" text-anchor="middle" font-size="${N>6?13:16}" font-family="Manrope, sans-serif" fill="#1F1F1D">${f(o.tails,2)} g/t en sólidos</text>
     </g>`;
     if (i < N-1){ const x2 = xs(i+1), y2 = ys(i+1);
       g += `<path d="M${x+tw} ${lvl+8} H ${x+tw+(x2-x-tw)/2} V ${y2+th*0.1+14} H ${x2-3}" fill="none" stroke="#1F1F1D" stroke-width="2.5" marker-end="url(#tka)" class="flowdash-solid"/>`; }
@@ -1626,7 +1650,26 @@ function renderTanks(){
   const xl = xs(N-1)+tw, yl = ys(N-1)+th*0.1+8;
   g += `<path d="M${xl} ${yl} H ${W-10}" stroke="#1F1F1D" stroke-width="2.5" fill="none" marker-end="url(#tka)" class="flowdash-solid"/><text x="${W-10}" y="${yl-12}" text-anchor="end" font-size="16" font-family="Manrope, sans-serif">A filtrado</text>`;
   g += `<text x="20" y="34" font-size="17" font-family="Manrope, sans-serif" fill="#6E6D68">Cada tanque: Ø ${f(S.tank.D,2)} × ${f(S.tank.H,2)} m · ${f(s.Vt,1)} m³ útiles · ${f(s.tau/N,1)} h de residencia · agitador de ${f(7.5*s.Vt/49.8,1)} kW</text>`;
-  document.getElementById('tk-svg').innerHTML = `<svg viewBox="0 0 ${W} ${Math.max(Hsvg, ys(N-1)+th+140)}" class="flow-svg" style="min-width:0;width:100%" role="img" aria-label="Serie de ${N} tanques de cianuración">${g}</svg>`;
+  document.getElementById('tk-svg').innerHTML = `<div class="tk-tip" id="tk-tip" hidden></div><svg viewBox="0 0 ${W} ${Math.max(Hsvg-60, ys(N-1)+th+60)}" class="flow-svg" style="min-width:0;width:100%" role="img" aria-label="Serie de ${N} tanques de cianuración">${g}</svg>`;
+  const box = document.getElementById('tk-svg'), tip = document.getElementById('tk-tip');
+  const show = (gEl)=>{ const o = out[+gEl.dataset.i], prev = o.i>1 ? out[o.i-2] : null;
+    tip.innerHTML = `<b>TK-${800+o.i}</b> · tanque ${o.i} de ${N}
+      <div><span>Tiempo en este tanque</span><em>${f(s.tau/N,1)} h</em></div>
+      <div><span>Tiempo acumulado</span><em>${f(o.tcum,1)} h</em></div>
+      <div><span>Oro recuperado a la salida</span><em>${f(o.R*100,1)} %</em></div>
+      <div><span>Ganado en este tanque</span><em>+${f((o.R-(prev?prev.R:0))*100,1)} %</em></div>
+      <div><span>Oro en la solución</span><em>${f(o.AuSol,2)} mg/L</em></div>
+      <div><span>Oro que queda en el sólido</span><em>${f(o.tails,2)} g/t</em></div>
+      <div><span>Pulpa que pasa</span><em>${f(s.Q,2)} m³/h · ${f(s.Ms,2)} t/h</em></div>`;
+    tip.hidden = false;
+    const bb = gEl.getBoundingClientRect(), wb = box.getBoundingClientRect();
+    let left = bb.left - wb.left + bb.width/2 - tip.offsetWidth/2;
+    left = Math.max(6, Math.min(wb.width - tip.offsetWidth - 6, left));
+    tip.style.left = left+'px'; tip.style.top = Math.max(6, bb.top - wb.top + bb.height*0.35)+'px'; };
+  box.querySelectorAll('.tkg').forEach(gEl=>{
+    gEl.addEventListener('mouseenter', ()=>show(gEl)); gEl.addEventListener('focus', ()=>show(gEl));
+    gEl.addEventListener('click', ()=>show(gEl));
+    gEl.addEventListener('mouseleave', ()=>{ tip.hidden = true; }); gEl.addEventListener('blur', ()=>{ tip.hidden = true; }); });
   const c = CH['ch-tanks'];
   c.data.labels = out.map(o=>`TK-${800+o.i} (${f(o.tcum,1)} h)`);
   c.data.datasets = [
@@ -1638,7 +1681,8 @@ function renderTanks(){
 // ---------- zonas mineras y montaña ----------
 function applyZone(id){
   const z = zoneOf(id); if (!z) return;
-  S.env.zone = id; S.env.Tamb = z.T; S.common.alt = z.alt; S.cn.T = z.T; S.tu.T = z.T;
+  const dc = Math.max(0, S.cn.T - S.env.Tamb), du = Math.max(0, S.tu.T - S.env.Tamb);
+  S.env.zone = id; S.env.Tamb = z.T; S.common.alt = z.alt; S.cn.T = Math.min(60, z.T + dc); S.tu.T = Math.min(60, z.T + du);
   schedule();
 }
 function zoneO2(z){ return o2Sat(z.T, z.alt); }
@@ -1712,7 +1756,7 @@ function syncZoneSelects(){
 mountSliders('common-sliders','sim', ['ley','feed','sol','p80'].map(k=>['common',k]));
 mountSliders('sim-env-sliders','sim', [['common','alt'],['env','Tamb'],['env','o2']]);
 mountSliders('kin-env-sliders','kin', [['common','alt'],['env','Tamb'],['env','o2']]);
-mountSliders('cn-sliders','sim', [...Object.keys(SPEC.cn).map(k=>['cn',k]), ['tank','N'],['tank','D'],['tank','H']]);
+mountSliders('cn-sliders','sim', Object.keys(SPEC.cn).map(k=>['cn',k]));
 mountSliders('tk-sliders','tk', [['tank','N'],['tank','D'],['tank','H'],['common','feed']]);
 mountSliders('tu-sliders','sim', Object.keys(SPEC.tu).map(k=>['tu',k]));
 mountSliders('kin-sliders','kin', [['kin','Ea'],['kin','Z']]);
@@ -1737,6 +1781,7 @@ CH['ch-tanks'] = new Chart(document.getElementById('ch-tanks'), { type:'bar', da
   scales:{ y:{min:0,max:100,title:{display:true,text:'Oro recuperado (%)'}}, y2:{type:'linear',position:'right',min:0,title:{display:true,text:'Oro en solución (mg/L)'},grid:{drawOnChartArea:false}}, x:{grid:{display:false}} },
   plugins:{legend:{position:'bottom'}} } });
 document.getElementById('tk-size').addEventListener('click', sizeTanks);
+for (const r of ['cn','tu']) document.getElementById('eh-'+r).addEventListener('input', e=>{ S[r].T = Math.min(60, S.env.Tamb + parseFloat(e.target.value)); schedule(); });
 lineChart('ch-eco-cum','Año','Millones de US$',{yd:2, x:{min:0}});
 lineChart('ch-eco-price','Precio del oro (US$/oz)','VAN (millones de US$)',{yd:2});
 mountEco();
