@@ -263,6 +263,16 @@ section.tab{padding:28px 0 56px}
 .modal-x{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--paper);font-size:24px;line-height:1;cursor:pointer;color:var(--ink)}
 .modal-x:hover{background:var(--ink);color:var(--paper)}
 body.modal-open{overflow:hidden}
+
+.zmark{cursor:pointer}
+.zmark:focus{outline:none}.zmark:focus-visible circle{stroke:#8A5A12;stroke-width:4}
+.zbar{margin-top:16px}
+.zbar-h{display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:6px}
+.zrow{display:grid;grid-template-columns:110px 1fr 54px;gap:10px;align-items:center;font-size:13.5px;color:var(--muted);padding:2px 0}
+.zrow .zt{height:8px;border-radius:5px;background:#e4e3de;overflow:hidden}
+.zrow .zt i{display:block;height:100%;background:#9B9A94;border-radius:5px}
+.zrow.on{color:var(--ink);font-weight:700}.zrow.on .zt i{background:var(--ochre)}
+.zrow em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
 footer.bot{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 0 40px;gap:12px}
 footer .f-brand{font-family:var(--display);font-weight:600;font-size:18px}
 footer .f-next{background:none;border:0;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer;color:var(--ink)}
@@ -309,25 +319,10 @@ ol.refs li{margin:0 0 10px}
   </div>
 
   <div class="hrow" style="margin-top:40px">
-    <figure class="card fig fig-map">
-      <svg viewBox="0 0 420 300" role="img" aria-label="Esquema de ubicación del distrito Vetas–California al noreste de Bucaramanga">
-        <rect x="0" y="0" width="420" height="300" rx="16" fill="#E8E7E2"/>
-        <path d="M40 250 C 90 200, 120 170, 170 150 S 260 90, 330 60 L 390 40" fill="none" stroke="#D7D6D1" stroke-width="26" stroke-linecap="round"/>
-        <path d="M250 70 C 290 60, 330 70, 360 100 C 380 125, 360 160, 320 165 C 280 170, 250 140, 240 115 C 232 95, 236 76, 250 70 Z" fill="#cfd8c4" opacity=".9"/>
-        <text x="300" y="122" font-size="12" fill="#4f5f3c" text-anchor="middle" font-family="Manrope, sans-serif">Páramo de</text>
-        <text x="300" y="137" font-size="12" fill="#4f5f3c" text-anchor="middle" font-family="Manrope, sans-serif">Santurbán</text>
-        <line x1="110" y1="225" x2="235" y2="120" stroke="#1F1F1D" stroke-dasharray="4 5" stroke-width="1.5"/>
-        <circle cx="110" cy="225" r="7" fill="#1F1F1D"/>
-        <text x="122" y="248" font-size="14" font-weight="600" fill="#1F1F1D" font-family="Instrument Sans, sans-serif">Bucaramanga</text>
-        <circle cx="235" cy="120" r="9" fill="#E0A448" stroke="#1F1F1D" stroke-width="1.5"/>
-        <text x="150" y="108" font-size="14" font-weight="600" fill="#1F1F1D" font-family="Instrument Sans, sans-serif">California</text>
-        <circle cx="262" cy="92" r="6" fill="#E0A448" stroke="#1F1F1D" stroke-width="1.5"/>
-        <text x="190" y="80" font-size="14" font-weight="600" fill="#1F1F1D" font-family="Instrument Sans, sans-serif">Vetas</text>
-        <text x="150" y="180" font-size="12" fill="#6E6D68" font-family="Manrope, sans-serif" transform="rotate(-40 150 180)">~55 km</text>
-        <text x="20" y="30" font-size="12" fill="#6E6D68" font-family="Manrope, sans-serif">Macizo de Santander · esquema sin escala</text>
-        <text x="392" y="280" font-size="13" fill="#6E6D68" text-anchor="end" font-family="Manrope, sans-serif">N ↑</text>
-      </svg>
-      <figcaption><b>Dónde está el oro.</b> El distrito Vetas–California queda unos 55 km al noreste de Bucaramanga, junto al páramo de Santurbán. Allí se explota oro desde hace más de 450 años y está el proyecto Soto Norte, con reservas de 20,3 millones de toneladas a 7,0 gramos de oro por tonelada.</figcaption>
+    <figure class="card fig">
+      <div id="mountain"></div>
+      <figcaption><b>Pulsa un punto de la montaña</b> para comparar altitud, temperatura y oxígeno disponible en cada zona, y usar esas condiciones en la simulación. Zona activa: <b id="zone-active"></b>.</figcaption>
+      <div class="tbl-wrap" style="background:none"><table id="zone-table"></table></div>
     </figure>
 
     <div class="feature">
@@ -340,6 +335,16 @@ ol.refs li{margin:0 0 10px}
         <li><div><b>Oxidar antes ayuda</b><span>Con biooxidación previa, el cianuro llegó a 93 %.</span></div></li>
       </ul>
     </div>
+  </div>
+
+  <div id="zone-modal" class="modal" hidden></div>
+
+  <h2 class="sec-title">¿Cuánto mineral procesa una planta de la zona?</h2>
+  <p class="sec-sub">El diseño original suponía 80 t/d. Los títulos mineros de pequeña escala de California producen mucho menos, por eso la capacidad base del simulador es 20 t/d. Una mina produce mineral; una planta lo procesa, y puede recibir mineral de varias minas.</p>
+  <div class="hrow h3">
+    <div class="card"><h3>Producción de una mina pequeña</h3><p>Cinco títulos de pequeña minería en California reportan entre 2.420 y 21.000 t/año de mineral (mediana 6.729 t/año). Con 350 días de trabajo, eso equivale a 7–60 t/d, y a unos 19 t/d para la mina típica.</p><p class="src">DYNA 91(231), 2024 · los títulos no reportan días de operación; 350 d/año es el supuesto del diseño</p></div>
+    <div class="card"><h3>Plantas y asociaciones existentes</h3><p>La asociación Calimineros (160 mineros) podrá extraer unas 70 t/d de mineral en bruto. En Vetas, la planta de La Elsy tiene capacidad de 120 t/d, aunque su producción reportada fue baja.</p><p class="src">Portafolio · Agencia Nacional de Minería</p></div>
+    <div class="card"><h3>Escala industrial, como referencia</h3><p>La planta proyectada de Soto Norte procesaría 3.500 t/d, de las cuales 750 t/d se reservarían para comprar mineral a los mineros locales. Es una escala muy distinta a la de un título pequeño.</p><p class="src">Estudio de prefactibilidad de Soto Norte (Aris Mining)</p></div>
   </div>
 
   <h2 class="sec-title">Cómo se libera y se disuelve el oro</h2>
@@ -466,6 +471,10 @@ ol.refs li{margin:0 0 10px}
         </div>
         <div class="sl-meta" style="margin-top:6px"><span>1/r₀²: lo que suponen los tres modelos (Ray, sec. 4.2.4). 1/r₀: lo que muestran los datos medidos (44 µm en 13 h; 149 µm en 44 h).</span></div>
       </div>
+      <div class="grp-title">Zona minera</div>
+      <select class="sel full zone-sel" aria-label="Zona minera"></select>
+      <p class="small zone-note" style="margin:6px 0 0"></p>
+      <div id="kin-env-sliders"></div>
       <div class="grp-title">Condiciones de operación</div>
       <div id="kin-op-sliders"></div>
       <button class="btn full reset-btn" type="button">Volver a condiciones iniciales establecidas</button>
@@ -503,6 +512,10 @@ ol.refs li{margin:0 0 10px}
 
   <div class="split" style="margin-top:26px">
     <aside class="side panel" aria-label="Variables operativas">
+      <div class="grp-title">Zona minera</div>
+      <select class="sel full zone-sel" aria-label="Zona minera"></select>
+      <p class="small zone-note" style="margin:6px 0 0"></p>
+      <div id="sim-env-sliders"></div>
       <div class="grp-title">Condiciones comunes</div>
       <div id="common-sliders"></div>
       <div class="grp-title"><span class="dot" style="background:var(--cn)"></span>Cianuración</div>
@@ -546,7 +559,7 @@ ol.refs li{margin:0 0 10px}
         <div class="chart-card"><h4>Flujo de caja acumulado</h4><p class="small">Dinero acumulado año a año, en millones de US$. Empieza negativo por la inversión; donde cruza el cero, la inversión ya se recuperó.</p><div class="chart-box"><canvas id="ch-eco-cum"></canvas></div></div>
         <div class="chart-card"><h4>Rentabilidad según el precio del oro</h4><p class="small">Valor actual neto en millones de US$. Por encima de cero la ruta es rentable; por debajo, pierde dinero.</p><div class="chart-box"><canvas id="ch-eco-price"></canvas></div></div>
       </div>
-      <p class="small" style="margin-top:14px">Incluye CAPEX y OPEX del circuito de acondicionamiento y lixiviación, la inversión en mina y resto de planta, tratamiento de residuos, costo de mina, conminución y recuperación final por tonelada, regalías del 4 % sobre el 80 % del precio internacional e impuesto de renta con depreciación lineal.</p>
+      <p class="small" style="margin-top:14px">La inversión en mina y resto de planta se estima escalando la de Soto Norte (US$625 M para 3.500 t/d) con la regla de los seis décimos; para plantas pequeñas esta extrapolación no está verificada y domina el resultado. Incluye además CAPEX y OPEX del circuito de acondicionamiento y lixiviación, el calentamiento de la pulpa si su temperatura supera la ambiente, tratamiento de residuos, costo de mina, conminución y recuperación final por tonelada, regalías del 4 % sobre el 80 % del precio internacional e impuesto de renta con depreciación lineal.</p>
     </div>
   </div>
 </section>
@@ -573,6 +586,9 @@ ol.refs li{margin:0 0 10px}
     <li>García Ramírez, C. A. y Uribe Portilla, E. Yacimiento de oro y plata Los Delirios, región de Vetas, Santander. <i>Boletín de Geología</i>, Universidad Industrial de Santander. <a href="https://revistas.uis.edu.co/index.php/revistaboletindegeologia/article/download/3957/4299/16869">Enlace</a></li>
     <li>Assessment of mining activity on arsenic contamination in surface water and sediments in southwestern area of Santurbán paramo, Colombia. <a href="https://agris.fao.org/search/en/records/65df4e180f3e94b9e5d72c58">Registro FAO AGRIS</a></li>
     <li>Aris Mining Corporation (2025). <i>NI 43-101 Technical Report: Prefeasibility Study for the Soto Norte Project, Santander, Colombia</i>.</li>
+    <li>Análisis técnico comparativo del estado actual de títulos mineros de minería a pequeña escala en California, Santander, Colombia (2024). <i>DYNA</i>, 91(231), 143–152.</li>
+    <li>Agencia Nacional de Minería (2023). <i>Proyecto La Elsy y Nueva Elsy, Vetas (Santander)</i>. Ficha de promoción minera.</li>
+    <li>IDEAM (2012). <i>Promedios climatológicos 1981–2010</i>. Estación Vivero Suratá.</li>
     <li>Congreso de Colombia. Ley 141 de 1994, modificada por la Ley 756 de 2002, art. 16 (regalías por explotación de recursos naturales no renovables).</li>
   </ol>
 </section>
@@ -698,7 +714,7 @@ const CAL = {
 const TU_EXP = Math.log(4.5)/Math.log(3); // consumo ×4–5 al pasar de 2 a 6 g/L (Carrillo et al.)
 
 // ---------- hidráulica de pulpa (doc. Tabla 7) ----------
-const RHO_S = 2.70, RHO_L = 1.00, V_TANK = 49.8;
+const RHO_S = 2.70, RHO_L = 1.00, V_TANK = 49.8, N_SERIES = 5, Q_REF = 8.0, MS_REF = 80/24;
 function pulp(feed_td, solids_pct){
   const Ms = feed_td/24, Cw = solids_pct/100;
   const water = Ms*(1-Cw)/Cw;
@@ -723,7 +739,8 @@ function simulate(route, P, opt){
   const k = kref * (F/Fref) * Math.pow(cal.cond.p80/P.p80, n);
   const pp = pulp(P.feed, P.sol);
   const tau = (opt && opt.tau) || P.tau;
-  const N = Math.max(1, Math.ceil(pp.Q*tau/V_TANK - 1e-9));
+  const N = N_SERIES;                       // 5 tanques en serie (diseño del documento)
+  const Vt = pp.Q*tau/N;                     // volumen útil de cada tanque
   const aPlant = plantAlpha(m, k, tau, N);
   const R = cal.Rinf * aPlant;
   const AuFeed = pp.Ms*P.ley;             // g/h
@@ -737,7 +754,7 @@ function simulate(route, P, opt){
     stoich = P.ley*R*2*76.12/196.97/1000;
     cons = cal.a*Math.pow(P.C, TU_EXP)*pp.LS*tau;
   }
-  return { R, aPlant, k, kref, N, Q:pp.Q, V:N*V_TANK, Vreq:pp.Q*tau, LS:pp.LS, water:pp.water, Ms:pp.Ms,
+  return { R, aPlant, k, kref, N, Vt, Q:pp.Q, V:N*Vt, Vreq:pp.Q*tau, LS:pp.LS, water:pp.water, Ms:pp.Ms,
            AuFeed, AuDis, AuGd: AuDis*24, AuSol: AuDis/pp.water, tails: P.ley*(1-R), cons, stoich, hab, Rinf:cal.Rinf, tau };
 }
 function batchCurve(route, P, tmax, pts){
@@ -768,23 +785,29 @@ function economics(route, P, E, sim){
   const oz = tyr*P.ley*sim.R*E.recDown/31.1035;
   const revenue = oz*E.price;
   const royalty = revenue*E.royaltyBase*E.royalty;
-  // CAPEX (doc Tabla 8) escalado por número de tanques
-  const tankUnit = 199039/5;
+  // CAPEX (doc. Tabla 8) escalado con la regla de los seis décimos
   const fmat = route==='tu' ? E.fmat : 1;
-  const eqTanks = tankUnit*sim.N*fmat;
-  const eqCond = 14353*fmat;
-  const eqReag = route==='cn' ? (4265+1620) : (4265 + 4265 + 1620);
+  const sV = Math.pow(sim.Vt/V_TANK, 0.6), sQ = Math.pow(sim.Q/Q_REF, 0.6), sM = Math.pow(sim.Ms/MS_REF, 0.6);
+  const eqTanks = (199039/5)*sim.N*sV*fmat;
+  const eqCond = 14353*sQ*fmat;
+  const eqReag = (route==='cn' ? (4265+1620) : (4265 + 4265 + 1620))*sM;
   const eq = eqTanks + eqCond + eqReag;
   const direct = eq*1.78;
   const epcm = direct*0.12;
   const cont = (direct+epcm)*0.30;
   const capexCircuit = direct+epcm+cont;
-  const capex = capexCircuit + E.capexExtra;
-  // energía (doc: 31,24 kW absorbidos de 44,9 instalados)
-  const kWinst = 2.2 + 7.5*sim.N + 3 + (route==='cn'?2.2:0);
+  const capexExtra = 625e6*Math.pow(P.feed/3500, 0.6);   // mina y resto de planta, escalado de Soto Norte
+  const capex = capexCircuit + capexExtra;
+  // energía (doc.: 31,24 kW absorbidos de 44,9 instalados); potencia ∝ volumen o caudal
+  const kWinst = 2.2*(sim.Q/Q_REF) + 7.5*sim.N*(sim.Vt/V_TANK) + 3*(sim.Q/Q_REF) + (route==='cn'?2.2*(sim.Ms/MS_REF):0);
   const kWabs = kWinst*31.24/44.9;
+  // calentamiento de la pulpa sobre la temperatura ambiente: Q = (ṁs·cps + ṁw·cpw)·ΔT
+  const dT = Math.max(0, P.T - P.Tamb);
+  const heatKW = (sim.Ms*1000*0.8 + sim.water*1000*4.186)*dT/3600;
   const MWh = kWabs*24*days/1000;
+  const heatMWh = heatKW*24*days/1000;
   const energy = MWh*E.elec;
+  const heatCost = heatMWh*E.elec;
   // reactivos
   let reag = {}, waste = 0, wasteDetail='';
   if (route==='cn'){
@@ -813,7 +836,7 @@ function economics(route, P, E, sim){
   const reagents = Object.values(reag).reduce((a,b)=>a+b,0);
   const personnel = 240651, maint = 0.04*eq, lab = 20000;
   const upstream = E.upstream*tyr;
-  const opexCircuit = reagents + energy + personnel + maint + lab;
+  const opexCircuit = reagents + energy + heatCost + personnel + maint + lab;
   const opex = opexCircuit + (E.incWaste?waste:0) + upstream;
   const ebitda = revenue - royalty - opex;
   const dep = capex/E.life;
@@ -828,7 +851,7 @@ function economics(route, P, E, sim){
     const d = cf/Math.pow(1+E.rate,y);
     if (dpay===null && dcum+d>=0) dpay = y-1 + (-dcum)/d; dcum+=d;
   }
-  return { tyr, oz, revenue, royalty, capex, capexCircuit, eq, direct, epcm, cont, kWabs, MWh, energy, reag, reagents, waste, wasteDetail,
+  return { tyr, oz, revenue, royalty, capex, capexCircuit, capexExtra, heatKW, heatCost, eq, direct, epcm, cont, kWabs, MWh, energy, reag, reagents, waste, wasteDetail,
            personnel, maint, lab, upstream, opexCircuit, opex, ebitda, tax, cf, flows, npv, irr, pay, dpay,
            costOzCircuit: oz>0? opexCircuit/oz : NaN, costOz: oz>0 ? (opex+royalty)/oz : NaN, margin: revenue>0? ebitda/revenue : NaN };
 }
@@ -853,34 +876,45 @@ const MDASH = { J:[9,5], GB:[], CV:[3,4], SC:[10,4] };
 
 const DEF = {
   scen:'proyecto', model:'GB', sizeMode:'modelo', Ea:20, Z:1.5,
-  common:{ ley:7.0, feed:80, sol:33, p80:75, alt:0 },
-  cn:{ pH:10.75, C:1.0, tau:30, T:21, target:90 },
-  tu:{ pH:1.5, C:6, ratio:0.5, tau:10, T:21, target:95 }
+  env:{ zone:'california', Tamb:17 },
+  common:{ ley:7.0, feed:20, sol:33, p80:75, alt:2005 },
+  cn:{ pH:10.75, C:1.0, tau:30, T:17, target:90 },
+  tu:{ pH:1.5, C:6, ratio:0.5, tau:10, T:17, target:95 }
 };
+// zonas mineras: altitud de la cabecera o estación y temperatura media anual
+const ZONES = [
+  {id:'vetas', n:'Vetas', alt:3350, T:11, x:470, src:'Altitud: cabecera municipal (3.350 m). Temperatura media: 11 °C (Climate-Data.org); otras fuentes reportan 5–6 °C en las partes altas del páramo.'},
+  {id:'california', n:'California', alt:2005, T:17, x:345, src:'Altitud del casco urbano y temperatura media (13–20 °C) según la información municipal.'},
+  {id:'surata', n:'Suratá', alt:1725, T:17.7, x:245, src:'Estación IDEAM Vivero Suratá (1.725 m), promedio 1981–2010.'},
+  {id:'bucaramanga', n:'Bucaramanga', alt:959, T:23, x:95, src:'Altitud media de la ciudad (959 m). Temperatura media de ~23 °C; referencia urbana, no zona minera.'}
+];
 const S = JSON.parse(JSON.stringify(DEF));
 
 // ---------- especificación de controles ----------
 const SPEC = {
   common:{
     ley:{lab:'Ley de oro', u:'g/t', min:0.5, max:30, step:0.1, rec:[1.5,26.3], note:'Base 7,0 g/t (reservas de Soto Norte); 1,5–26,3 g/t medidos en el distrito', d:1},
-    feed:{lab:'Caudal de alimentación', u:'t/d', min:20, max:200, step:1, rec:[64,96], note:'Nominal 80 t/d; diseño hidráulico 9,6 m³/h de pulpa', d:0},
+    feed:{lab:'Caudal de alimentación', u:'t/d', min:5, max:150, step:1, rec:[7,70], note:'Base 20 t/d; minas pequeñas de California producen 7–60 t/d', d:0},
     sol:{lab:'Sólidos en pulpa', u:'% m/m', min:15, max:55, step:0.5, rec:[30,35], note:'Base 33 %; 30 % en los ensayos de referencia', d:1},
     p80:{lab:'Granulometría P80', u:'µm', min:20, max:300, step:1, rec:[44,149], note:'Base 75 µm; datos cinéticos entre 44 y 149 µm', d:0},
-    alt:{lab:'Altitud de la planta', u:'m s.n.m.', min:0, max:3500, step:10, rec:[0,1326], note:'Reduce el oxígeno disuelto de saturación', d:0}
+    alt:{lab:'Altitud de la planta', u:'m s.n.m.', min:0, max:3500, step:10, rec:[0,3500], note:'A más altura, menos oxígeno en el aire', d:0}
   },
   cn:{
     pH:{lab:'pH', u:'', min:8, max:13, step:0.05, rec:[10.5,11.0], note:'Fija la fracción de cianuro libre (pKa 9,31)', d:2},
     C:{lab:'Concentración de NaCN', u:'g/L', min:0.05, max:3, step:0.05, rec:[1.0,1.5], note:'Base 1,0 g/L a la salida del tren', d:2},
     tau:{lab:'Tiempo de residencia', u:'h', min:4, max:72, step:0.5, rec:[24,30], note:'Define el volumen y el número de tanques', d:1},
-    T:{lab:'Temperatura', u:'°C', min:5, max:60, step:0.5, rec:[20,22], note:'Pulpa a temperatura ambiente', d:1},
+    T:{lab:'Temperatura de la pulpa', u:'°C', min:0, max:60, step:0.5, rec:[0,60], note:'Por encima de la temperatura ambiente hay que calentar, con costo de energía', d:1},
     target:{lab:'Recuperación objetivo', u:'%', min:50, max:99, step:0.5, rec:[50,99], note:'Calcula el tiempo de residencia requerido', d:1}
   },
   tu:{
     pH:{lab:'pH', u:'', min:0.8, max:4.5, step:0.05, rec:[1.4,1.8], note:'Fija el ácido a neutralizar en los relaves', d:2},
     C:{lab:'Concentración de tiourea', u:'g/L', min:0.5, max:50, step:0.5, rec:[2,6], note:'Ensayado entre 2 y 6 g/L con Fe³⁺/Tu = 0,5 y 510 mV', d:1},
     tau:{lab:'Tiempo de residencia', u:'h', min:1, max:48, step:0.5, rec:[4,10], note:'Curvas experimentales hasta 10 h', d:1},
-    T:{lab:'Temperatura', u:'°C', min:5, max:60, step:0.5, rec:[20,25], note:'Pulpa a temperatura ambiente', d:1},
+    T:{lab:'Temperatura de la pulpa', u:'°C', min:0, max:60, step:0.5, rec:[0,60], note:'Por encima de la temperatura ambiente hay que calentar, con costo de energía', d:1},
     target:{lab:'Recuperación objetivo', u:'%', min:50, max:99, step:0.5, rec:[50,99], note:'Calcula el tiempo de residencia requerido', d:1}
+  },
+  env:{
+    Tamb:{lab:'Temperatura ambiente', u:'°C', min:0, max:35, step:0.5, rec:[0,35], note:'Temperatura media de la zona; la pulpa no se calienta por defecto', d:1}
   },
   kin:{
     Ea:{lab:'Energía de activación difusional', u:'kJ/mol', min:8, max:20, step:0.5, rec:[8,20], note:'Rango para control difusional (Marsden). Solo influye si la temperatura difiere de la del ajuste', d:1},
@@ -890,6 +924,7 @@ const SPEC = {
 const tag = s => '';
 const f = (x,d=0)=>fmt(x,d);
 const objOf = g => g==='kin' ? S : S[g];
+const zoneOf = id => ZONES.find(z=>z.id===id);
 
 function sliderHTML(prefix, group, key, label){
   const sp = SPEC[group][key], val = objOf(group)[key];
@@ -912,7 +947,7 @@ function mountSliders(container, prefix, items){
   el.innerHTML = items.map(([g,k,l])=> sliderHTML(prefix, g, k, l)).join('');
   items.forEach(([g,k])=>{
     const inp = document.getElementById(`${prefix}-${g}-${k}`);
-    inp.addEventListener('input', ()=>{ objOf(g)[k] = parseFloat(inp.value); if (g==='kin' && k==='Z') setZ(S.Z); syncSlider(g,k); schedule(); });
+    inp.addEventListener('input', ()=>{ objOf(g)[k] = parseFloat(inp.value); if (g==='kin' && k==='Z') setZ(S.Z); if (g==='env' || (g==='common' && k==='alt')) S.env.zone='custom'; syncSlider(g,k); schedule(); });
   });
 }
 function syncSlider(group, key){
@@ -931,7 +966,7 @@ function params(route){
   const r = S[route];
   return { scen:S.scen, model:S.model, sizeMode:S.sizeMode, Ea:S.Ea,
            ley:S.common.ley, feed:S.common.feed, sol:S.common.sol, p80:S.common.p80, alt:S.common.alt,
-           pH:r.pH, C:r.C, tau:r.tau, T:r.T, ratio:0.5 };
+           pH:r.pH, C:r.C, tau:r.tau, T:r.T, Tamb:S.env.Tamb, ratio:0.5 };
 }
 
 // ---------- pestañas ----------
@@ -1202,6 +1237,10 @@ function alertsFor(route, P, s){
     if (P.pH < 10.2) A.push(['warn','Riesgo de gas HCN', `A este pH el ${f(100*(1-fracCN(P.pH)),0)} % del cianuro se convierte en HCN, un gas tóxico.`]);
     A.push(['info', `Limita ${s.hab.limit==='O2'?'el oxígeno':'el cianuro'}`, s.hab.limit==='O2'?'Hay cianuro de sobra: subir el NaCN casi no acelera la disolución.':'Falta cianuro libre: subir el NaCN acelera la disolución.']);
   } else if (s.cons > 4) A.push(['info','Consumo alto de tiourea', 'Supera los 1–4 kg/t de sistemas optimizados; en mineral de Santander se midieron 23 kg/t.']);
+  const dT = P.T - P.Tamb;
+  if (dT > 0.05){ const kw = (s.Ms*1000*0.8 + s.water*1000*4.186)*dT/3600;
+    A.push(['warn','Pulpa calentada', `Subir la pulpa ${f(dT,1)} °C sobre el ambiente exige unos ${f(kw,1)} kW continuos (${f(kw*24*350/1000,0)} MWh/año), que se suman al costo de energía en Economía.`]); }
+  else if (dT < -0.05) A.push(['warn','Pulpa más fría que el ambiente', 'Mantenerla así exigiría enfriamiento, que el modelo no incluye. Lo normal es operar a temperatura ambiente.']);
   return A;
 }
 const alertHTML = A => `<div class="alerts">${A.map(([k,t,m])=>`<div class="alert ${k==='warn'?'':k}"><b>${t}</b>${m}</div>`).join('')}</div>`;
@@ -1228,7 +1267,7 @@ function renderSim(){
       `<div class="kpis">
         <div class="kpi"><div class="v">${f(s.AuGd,0)}</div><div class="l">g/d de oro recuperado</div></div>
         <div class="kpi"><div class="v">${f(s.tails,2)}</div><div class="l">g/t de oro en el residuo</div></div>
-        <div class="kpi"><div class="v">${s.N} × 49,8</div><div class="l">tanques × m³</div></div>
+        <div class="kpi"><div class="v">${s.N} × ${f(s.Vt,1)}</div><div class="l">tanques × m³ cada uno</div></div>
         <div class="kpi"><div class="v">${req===null?'—':f(req,1)}</div><div class="l">h para ${f(S[route].target,0)} %${req===null?' (no alcanzable)':''}</div></div>
         ${route==='cn'?`<div class="kpi"><div class="v">${f(s.hab.o2mg,1)}</div><div class="l">mg/L de O₂ disuelto</div></div>
         <div class="kpi"><div class="v">${f(100*fracCN(P.pH),0)} %</div><div class="l">del cianuro activo (CN⁻)</div></div>`
@@ -1290,7 +1329,7 @@ function renderKin(){
   document.getElementById('size-lineal').setAttribute('aria-pressed', S.sizeMode==='lineal');
   document.querySelectorAll('.eqc').forEach(c=> c.classList.toggle('sel', c.dataset.m===S.model));
   document.getElementById('scen-hint').textContent = S.scen==='proyecto'
-    ? 'Todo el oro es lixiviable; la cianuración se ajusta al valor de diseño (90 % en 30 h).'
+    ? 'Todo el oro es lixiviable. La cianuración se ajusta al valor de diseño: 90 % en 30 h a 21 °C y nivel del mar; otras zonas cambian el resultado por su oxígeno y temperatura.'
     : 'Ensayado en laboratorio: solo el 56 % del oro está libre, así que la cianuración no supera ese valor.';
   // contraste con un dato no usado en el ajuste: tiourea ~50 % a 0,5 h (d80 149 µm)
   const tu05 = ['J','GB','CV'].map(m=> [m, 100*alphaOf(m, calibrateCached(m,S.scen,'tu')*0.5)]);
@@ -1319,7 +1358,6 @@ function renderKin(){
 const ECO_DEF = {
   price:{lab:'Precio del oro', u:'US$/oz', v:4100, s:'Spot de noviembre de 2026', show:1},
   royalty:{lab:'Regalía', u:'%', v:4, s:'Sobre el 80 % del precio internacional', show:1},
-  capexExtra:{lab:'Inversión en mina y resto de planta', u:'US$', v:64200000, s:'Escalada de la PFS de Soto Norte (US$625 M para 3.500 t/d) con la regla de los seis décimos', show:1},
   upstream:{lab:'Costo de mina, conminución y recuperación final', u:'US$/t', v:70, s:'Costo de operación fuera del circuito de lixiviación', show:1},
   elec:{lab:'Energía eléctrica', u:'US$/MWh', v:224, s:'', show:1},
   pNaCN:{lab:'Precio del NaCN', u:'US$/t', v:2500, s:'', show:1},
@@ -1337,7 +1375,7 @@ const ECO = JSON.parse(JSON.stringify(ECO_DEF));
 function ecoParams(){
   const g = k => ECO[k].v;
   return { price:g('price'), rate:g('rate')/100, life:Math.max(1,Math.round(g('life'))), tax:g('tax')/100, royalty:g('royalty')/100, royaltyBase:0.8,
-    days:g('days'), recDown:g('recDown')/100, upstream:g('upstream'), capexExtra:g('capexExtra'), elec:g('elec'), pNaCN:g('pNaCN'), pLime:g('pLime'),
+    days:g('days'), recDown:g('recDown')/100, upstream:g('upstream'), elec:g('elec'), pNaCN:g('pNaCN'), pLime:g('pLime'),
     pTu:g('pTu'), pAcid:g('pAcid'), acid:g('acid'), ferric:g('ferric'), pFerric:g('pFerric'), pSMBS:g('pSMBS'), so2Factor:g('so2Factor'), fmat:g('fmat'),
     recycle:g('recycle')/100, costDosed:false, incWaste:true };
 }
@@ -1369,11 +1407,12 @@ function renderEco(){
     ['Ingresos por venta', a.revenue, b.revenue, money],
     sec('2. Inversión'),
     ['Circuito de lixiviación', a.capexCircuit, b.capexCircuit, money],
-    ['Mina y resto de planta', a.capex-a.capexCircuit, b.capex-b.capexCircuit, money],
+    ['Mina y resto de planta (estimación)', a.capexExtra, b.capexExtra, money],
     ['Inversión total (CAPEX)', a.capex, b.capex, money, true],
     sec('3. Costos anuales de operación'),
     ['Reactivos', a.reagents, b.reagents, money],
     ['Energía', a.energy, b.energy, money],
+    ['Calentamiento de la pulpa', a.heatCost, b.heatCost, money],
     ['Tratamiento de residuos', a.waste, b.waste, money],
     ['Personal, mantenimiento y laboratorio', a.personnel+a.maint+a.lab, b.personnel+b.maint+b.lab, money],
     ['Mina, conminución y recuperación final', a.upstream, b.upstream, money],
@@ -1421,8 +1460,10 @@ function renderSources(){
       'Ray, ec. 4.23: k es proporcional a D·C e inversamente proporcional a r₀². F es r<sub>Au</sub> en cianuración y D·C<sub>Tu</sub> en tiourea; n = 2 en los modelos difusivos y n = 1 en el núcleo decreciente.'],
     ['Recuperación en planta', String.raw`\[ R=R_\infty\int_{0}^{\infty}\alpha(k\,t)\,E(t)\,dt,\qquad E(t)=\frac{(N/\tau)^{N}\,t^{\,N-1}\,e^{-Nt/\tau}}{(N-1)!} \]`,
       'Distribución de tiempos de residencia de N tanques agitados de mezcla perfecta en serie. R∞ es la fracción máxima de oro lixiviable.'],
-    ['Caudal de pulpa y número de tanques', String.raw`\[ Q=\frac{\dot M_s}{\rho_s}+\frac{\dot M_s\,(1-C_w)}{C_w\,\rho_l},\qquad N=\left\lceil\frac{Q\,\tau}{V_{t}}\right\rceil \]`,
-      'Con ρ<sub>s</sub> = 2,70 t/m³, ρ<sub>l</sub> = 1,00 t/m³ y V<sub>t</sub> = 49,8 m³ útiles por tanque. A 80 t/d y 33 % de sólidos, Q = 8,00 m³/h.'],
+    ['Caudal de pulpa y tamaño de tanques', String.raw`\[ Q=\frac{\dot M_s}{\rho_s}+\frac{\dot M_s\,(1-C_w)}{C_w\,\rho_l},\qquad V_{t}=\frac{Q\,\tau}{N},\quad N=5 \]`,
+      'Con ρ<sub>s</sub> = 2,70 t/m³ y ρ<sub>l</sub> = 1,00 t/m³. Se mantienen 5 tanques en serie, como en el diseño, y su volumen se ajusta al caudal; el costo de los equipos escala con (V/V<sub>ref</sub>)<sup>0,6</sup>.'],
+    ['Calentamiento de la pulpa', String.raw`\[ \dot Q=\left(\dot m_s\,c_{p,s}+\dot m_w\,c_{p,w}\right)\left(T-T_{amb}\right) \]`,
+      'Solo cuando la pulpa se opera por encima de la temperatura ambiente. c<sub>p,w</sub> = 4,186 kJ/kg·K (agua) y c<sub>p,s</sub> ≈ 0,8 kJ/kg·K (valor típico de rocas silicatadas). Se supone calentamiento eléctrico sin pérdidas, por lo que el costo es un mínimo.'],
     ['Consumo de reactivos', String.raw`\[ c_{NaCN}=c_{est}+k_d\,C\,\frac{L}{S}\,\tau,\qquad c_{Tu}=a\,C^{\,1{,}37}\,\frac{L}{S}\,\tau \]`,
       'Degradación proporcional a la concentración y al tiempo. k<sub>d</sub> se ajusta a 0,50 kg/t con 1,0 g/L y 30 h; a y el exponente 1,37 se ajustan a 23 kg/t con 6 g/L y al aumento de 4–5 veces al pasar de 2 a 6 g/L (Carrillo et al.).'],
     ['Indicadores económicos', String.raw`\[ \mathrm{VAN}=\sum_{t=0}^{n}\frac{FC_t}{(1+i)^{t}},\qquad \sum_{t=0}^{n}\frac{FC_t}{(1+\mathrm{TIR})^{t}}=0 \]`,
@@ -1432,27 +1473,103 @@ function renderSources(){
 }
 
 function render(){
-  syncAll();
+  syncAll(); syncZoneSelects();
+  if (current==='contexto') renderMountain();
   if (current==='rutas') renderFlow();
   if (current==='cinetica') renderKin();
   if (current==='simulacion') renderSim();
   if (current==='economia') renderEco();
 }
 
+
+// ---------- zonas mineras y montaña ----------
+function applyZone(id){
+  const z = zoneOf(id); if (!z) return;
+  S.env.zone = id; S.env.Tamb = z.T; S.common.alt = z.alt; S.cn.T = z.T; S.tu.T = z.T;
+  schedule();
+}
+function zoneO2(z){ return o2Sat(z.T, z.alt); }
+const MY = alt => 340 - alt*0.072;
+function renderMountain(){
+  const el = document.getElementById('mountain'); if (!el) return;
+  const ticks = [1000,2000,3000,4000].map(a=>`<line x1="40" x2="640" y1="${MY(a)}" y2="${MY(a)}" stroke="#D7D6D1" stroke-dasharray="3 5"/><text x="48" y="${MY(a)-5}" font-size="12" fill="#6E6D68" font-family="Manrope, sans-serif">${f(a,0)} m</text>`).join('');
+  const mtn = 'M40 340 L40 282 C 80 276, 110 272, 140 266 C 200 250, 230 222, 265 214 C 300 206, 330 196, 365 186 C 420 160, 450 112, 480 96 C 505 70, 525 50, 548 44 C 575 52, 610 110, 640 150 L640 340 Z';
+  const marks = ZONES.map(z=>{ const sel = S.env.zone===z.id, y = MY(z.alt);
+    return `<g class="zmark" data-z="${z.id}" tabindex="0" role="button" aria-label="${z.n}: ver condiciones">
+      <line x1="${z.x}" x2="${z.x}" y1="${y}" y2="${y-34}" stroke="#1F1F1D" stroke-width="1.5"/>
+      <circle cx="${z.x}" cy="${y}" r="${sel?11:9}" fill="${sel?'#1F1F1D':'#E0A448'}" stroke="#1F1F1D" stroke-width="2"/>
+      <rect x="${z.x-58}" y="${y-62}" width="116" height="28" rx="14" fill="${sel?'#1F1F1D':'#F7F7F5'}" stroke="#1F1F1D" stroke-width="1.2"/>
+      <text x="${z.x}" y="${y-43}" text-anchor="middle" font-size="14" font-weight="600" font-family="Instrument Sans, sans-serif" fill="${sel?'#F7F7F5':'#1F1F1D'}">${z.n}</text></g>`; }).join('');
+  el.innerHTML = `<svg viewBox="0 0 660 360" role="img" aria-label="Montaña con las zonas mineras según su altitud" style="width:100%;height:auto;display:block">
+    <rect width="660" height="360" rx="14" fill="#E8E7E2"/>${ticks}
+    <defs><clipPath id="mclip"><path d="${mtn}"/></clipPath></defs>
+    <path d="${mtn}" fill="#cfccc2"/>
+    <rect x="0" y="0" width="660" height="${MY(3000)}" fill="#a9b893" clip-path="url(#mclip)"/>
+    <text x="600" y="${MY(3000)+18}" text-anchor="middle" font-size="12" fill="#3f4d2c" font-family="Manrope, sans-serif">Páramo de Santurbán</text>
+    <text x="600" y="${MY(3000)+33}" text-anchor="middle" font-size="12" fill="#3f4d2c" font-family="Manrope, sans-serif">(sobre ~3.000 m)</text>
+    ${marks}</svg>`;
+  el.querySelectorAll('.zmark').forEach(g=>{ const go=()=> openZone(g.dataset.z); g.addEventListener('click',go); g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} }); });
+  const cur = zoneOf(S.env.zone);
+  document.getElementById('zone-active').textContent = cur ? cur.n : 'condiciones personalizadas';
+  document.getElementById('zone-table').innerHTML = `<thead><tr><th>Zona</th><th class="r">Altitud</th><th class="r">Temperatura media</th><th class="r">Oxígeno disuelto máximo</th></tr></thead><tbody>${
+    ZONES.map(z=>`<tr${S.env.zone===z.id?' class="strong"':''}><td>${z.n}</td><td class="r">${f(z.alt,0)} m</td><td class="r">${f(z.T,1)} °C</td><td class="r">${f(zoneO2(z),1)} mg/L</td></tr>`).join('')}</tbody>`;
+}
+let zoneOpen = null;
+function openZone(id){ zoneOpen = id; renderZoneModal(); }
+function closeZone(){ zoneOpen = null; renderZoneModal(); }
+function renderZoneModal(){
+  const m = document.getElementById('zone-modal');
+  if (!zoneOpen){ m.hidden = true; document.body.classList.remove('modal-open'); return; }
+  const z = zoneOf(zoneOpen), o2 = zoneO2(z), pr = Math.exp(-z.alt/8434);
+  const bars = (lab, unit, d, val, max) => `<div class="zbar"><div class="zbar-h"><span>${lab}</span><b>${f(val(z),d)} ${unit}</b></div>${
+    ZONES.map(o=>`<div class="zrow${o.id===z.id?' on':''}"><span>${o.n}</span><div class="zt"><i style="width:${100*val(o)/max}%"></i></div><em>${f(val(o),d)}</em></div>`).join('')}</div>`;
+  const colder = z.T < 15 ? 'El frío ayuda: el agua fría disuelve más oxígeno, lo que compensa en parte el aire más delgado.' : 'El calor reduce el oxígeno que el agua puede disolver, pero acelera el movimiento de los reactivos.';
+  m.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="zone-title">
+    <button class="modal-x" type="button" aria-label="Cerrar">×</button>
+    <div class="small">Zona</div><h3 id="zone-title" style="font-size:30px">${z.n}</h3>
+    <p style="margin-top:10px">A ${f(z.alt,0)} m la presión del aire es el ${f(pr*100,0)} % de la que hay al nivel del mar, así que el agua de la pulpa puede tomar menos oxígeno. ${colder} El oxígeno es el que limita la velocidad de la cianuración.</p>
+    ${bars('Altitud','m',0,o=>o.alt,3500)}
+    ${bars('Temperatura media','°C',1,o=>o.T,25)}
+    ${bars('Oxígeno disuelto máximo en el agua','mg/L',1,zoneO2,10)}
+    <p class="small" style="margin-top:14px">${z.src} El oxígeno se calcula con la solubilidad del oxígeno del aire en agua (Marsden, Tabla 6.4) corregida por la presión a esa altitud.</p>
+    <button class="btn fill" type="button" id="zone-use" style="margin-top:18px">${S.env.zone===z.id?'Esta zona ya está en uso':'Usar estas condiciones en la simulación'}</button>
+  </div>`;
+  m.hidden = false; document.body.classList.add('modal-open');
+  m.querySelector('.modal-x').addEventListener('click', closeZone);
+  m.querySelector('#zone-use').addEventListener('click', ()=>{ applyZone(z.id); closeZone(); });
+  m.querySelector('.modal-x').focus();
+}
+document.getElementById('zone-modal').addEventListener('click', e=>{ if (e.target.id==='zone-modal') closeZone(); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && zoneOpen) closeZone(); });
+function syncZoneSelects(){
+  document.querySelectorAll('.zone-sel').forEach(sel=>{
+    if (!sel.options.length){
+      ZONES.forEach(z=>{ const o=document.createElement('option'); o.value=z.id; o.textContent=`${z.n} · ${f(z.alt,0)} m · ${f(z.T,1)} °C`; sel.appendChild(o); });
+      const c=document.createElement('option'); c.value='custom'; c.textContent='Personalizada (deslizadores)'; sel.appendChild(c);
+      sel.addEventListener('change', ()=>{ if (sel.value!=='custom') applyZone(sel.value); });
+    }
+    sel.value = S.env.zone;
+  });
+  const z = zoneOf(S.env.zone);
+  document.querySelectorAll('.zone-note').forEach(p=> p.textContent = z ? 'Al elegir una zona se fijan su altitud y su temperatura media, y la pulpa queda a esa temperatura.' : 'Valores ajustados a mano.');
+}
+
 // ===================== INICIO =====================
-mountSliders('common-sliders','sim', Object.keys(SPEC.common).map(k=>['common',k]));
+mountSliders('common-sliders','sim', ['ley','feed','sol','p80'].map(k=>['common',k]));
+mountSliders('sim-env-sliders','sim', [['common','alt'],['env','Tamb']]);
+mountSliders('kin-env-sliders','kin', [['common','alt'],['env','Tamb']]);
 mountSliders('cn-sliders','sim', Object.keys(SPEC.cn).map(k=>['cn',k]));
 mountSliders('tu-sliders','sim', Object.keys(SPEC.tu).map(k=>['tu',k]));
 mountSliders('kin-sliders','kin', [['kin','Ea'],['kin','Z']]);
 mountSliders('flow-sliders','flow', [['common','feed','Mineral alimentado a trituración'],['common','sol']]);
-mountSliders('kin-op-sliders','kin', [['common','p80'],['cn','C','NaCN (cianuración)'],['cn','pH','pH (cianuración)'],['cn','T','Temperatura (cianuración)'],['tu','C','Tiourea'],['tu','T','Temperatura (tiourea)'],['common','alt']]);
+mountSliders('kin-op-sliders','kin', [['common','p80'],['cn','C','NaCN (cianuración)'],['cn','pH','pH (cianuración)'],['cn','T','Temperatura (cianuración)'],['tu','C','Tiourea'],['tu','T','Temperatura (tiourea)']]);
 document.getElementById('scen-sel').addEventListener('change', e=>{ S.scen=e.target.value; schedule(); });
 document.getElementById('model-sel').addEventListener('change', e=>{ S.model=e.target.value; schedule(); });
 document.getElementById('size-modelo').addEventListener('click', ()=>{ S.sizeMode='modelo'; schedule(); });
 document.getElementById('size-lineal').addEventListener('click', ()=>{ S.sizeMode='lineal'; schedule(); });
 document.querySelectorAll('.reset-btn').forEach(btn=> btn.addEventListener('click', ()=>{
   const d = JSON.parse(JSON.stringify(DEF));
-  Object.assign(S.common, d.common); Object.assign(S.cn, d.cn); Object.assign(S.tu, d.tu);
+  Object.assign(S.env, d.env); Object.assign(S.common, d.common); Object.assign(S.cn, d.cn); Object.assign(S.tu, d.tu);
   S.Ea = d.Ea; S.Z = d.Z; S.sizeMode = d.sizeMode; setZ(S.Z); schedule();
 }));
 lineChart('ch-kin-cn','Tiempo (h)','Recuperación (%)');
