@@ -311,6 +311,25 @@ body.modal-open{overflow:hidden}
 .heat-ctrl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:10px 0 14px}
 @media (max-width:980px){ .heat-ctrl{grid-template-columns:1fr} }
 .heat-ctrl input[type=range]{width:100%}
+
+.res2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.res .res-h{font-family:var(--display);font-size:22px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.res p{max-width:60ch}
+.hrow>.card{display:flex;flex-direction:column}
+.hrow>.card .src{margin-top:auto;padding-top:10px}
+.hrow.h3>.card h3{min-height:0}
+.hrow>figure.card{justify-content:center}
+.flist li{padding:12px 0}
+.flist span{display:block;line-height:1.45;margin-top:3px}
+.howto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px}
+.fig figcaption{line-height:1.5}
+.chart-box{height:clamp(420px,34vw,580px)}
+.split{grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:clamp(24px,2.6vw,44px)}
+.main-col .grid.g2{gap:clamp(18px,2vw,32px)}
+@media (max-width:1280px){ .main-col .grid.g2{grid-template-columns:1fr} }
+@media (max-width:980px){ .res2{grid-template-columns:1fr} }
+.charts-wide{grid-template-columns:1fr !important}
+.charts-wide .chart-box{height:clamp(420px,30vw,520px)}
 footer.bot{border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 0 40px;gap:12px}
 footer .f-brand{font-family:var(--display);font-weight:600;font-size:18px}
 footer .f-next{background:none;border:0;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer;color:var(--ink)}
@@ -369,7 +388,7 @@ ol.refs li{margin:0 0 10px}
         <li><div><b>7,0 g de oro por tonelada</b><span>Es la ley base del simulador; en el distrito se han medido de 1,5 a 26 g/t.</span></div></li>
         <li><div><b>Una mina pequeña mueve unas 20 t/d</b><span>Es la capacidad base de la planta que se simula.</span></div></li>
         <li><div><b>Dos rutas, dos químicas</b><span>Cianuro: pH 10,5–11 y oxígeno. Tiourea: pH 1,4–1,8 e ion férrico. Cada una tiene su velocidad, su consumo de reactivo y sus costos.</span></div></li>
-        <li><div><b>La altura resta oxígeno</b><span>En California el agua toma cerca de una quinta parte menos oxígeno que al nivel del mar, ; eso influye en la cianuración, que usa oxígeno. La tiourea no lo usa.</span></div></li>
+        <li><div><b>La altura resta oxígeno</b><span>En California el agua toma cerca de una quinta parte menos oxígeno que al nivel del mar; eso influye en la cianuración, que usa oxígeno. La tiourea no lo usa.</span></div></li>
       </ul>
     </div>
   </div>
@@ -446,15 +465,17 @@ ol.refs li{margin:0 0 10px}
     </figure>
   </div>
 
-  <h2 class="sec-title">Lo que dicen los estudios del distrito</h2>
-  <p class="sec-sub">Seis hallazgos en orden: cómo se formó el oro, qué contiene el mineral y qué se ha medido al lixiviarlo con cada reactivo.</p>
-  <div class="hrow h3 studies">
-    <div class="card"><h3><span class="n">1</span>Cómo se formó</h3><p>Fluidos calientes (143–328 °C) subieron por fracturas hace 2,6 a 1,6 millones de años y dejaron vetas con oro y plata.</p><p class="src">Andean Geology, 2024</p></div>
-    <div class="card"><h3><span class="n">2</span>Dónde quedó el oro</h3><p>Sobre todo dentro de la pirita, en granos de 1 a 40 micras, más finos que un cabello. Una parte está libre en fracturas.</p><p class="src">Andean Geology, 2024 · Boletín de Geología, UIS</p></div>
-    <div class="card"><h3><span class="n">3</span>Qué trae el mineral</h3><p>Una muestra de California tenía 6,2 % de pirita, 1,5 % de enargita y 0,25 % de arsénico. Solo el 56 % del oro estaba libre.</p><p class="src">Carrillo, Delgado y Córdoba</p></div>
-    <div class="card"><h3><span class="n">4</span>Ensayos con cianuro</h3><p>Recuperó 85–88 % en mineral oxidado y 46–50 % en sulfurado. Oxidar antes la pirita con bacterias llevó un mineral del distrito de ~75 % a 93 %.</p><p class="src">Carrillo, Delgado y Córdoba · Gamboa Rueda, UIS</p></div>
-    <div class="card"><h3><span class="n">5</span>Ensayos con tiourea</h3><p>En el mineral sulfurado recuperó 96 % en 10 h, con un consumo de 23 kg/t de tiourea. Son ensayos de laboratorio en un solo mineral.</p><p class="src">Carrillo, Delgado y Córdoba</p></div>
-    <div class="card"><h3><span class="n">6</span>El agua del entorno</h3><p>Los sedimentos del río Suratá tienen hasta 484 mg/kg de arsénico por la minería. Es un dato ambiental, no la composición del mineral.</p><p class="src">Estudio de arsénico en el páramo de Santurbán (FAO AGRIS)</p></div>
+  <h2 class="sec-title">Lo que dicen las investigaciones</h2>
+  <p class="sec-sub">Resultados de laboratorio con mineral del distrito Vetas–California.</p>
+  <div class="hrow res2">
+    <div class="card res"><div class="res-h"><span class="dot" style="background:var(--cn)"></span>Cianuración</div>
+      <p>Según las investigaciones, con cianuración se puede alcanzar <b>85–88&nbsp;%</b> de recuperación en mineral oxidado y <b>46–50,5&nbsp;%</b> en mineral sulfurado, en 35&nbsp;h de lixiviación.</p>
+      <p>Con una oxidación previa de la pirita con bacterias, la cianuración alcanzó <b>93&nbsp;%</b>.</p>
+      <p class="src">Carrillo, Delgado y Córdoba · Gamboa Rueda, UIS</p></div>
+    <div class="card res"><div class="res-h"><span class="dot" style="background:var(--tu)"></span>Tiourea</div>
+      <p>Según las investigaciones, con tiourea se puede alcanzar <b>96&nbsp;%</b> de recuperación en mineral sulfurado, en 10&nbsp;h de lixiviación, con un consumo de reactivo de <b>23&nbsp;kg/t</b>.</p>
+      <p>El ensayo se hizo con 6&nbsp;g/L de tiourea, ion férrico como oxidante y pH 1,5.</p>
+      <p class="src">Carrillo, Delgado y Córdoba</p></div>
   </div>
 </section>
 
@@ -567,7 +588,7 @@ ol.refs li{margin:0 0 10px}
       <button class="btn full reset-btn" type="button">Volver a condiciones iniciales establecidas</button>
     </aside>
     <div class="main-col">
-      <div class="grid g2">
+      <div class="grid g2 charts-wide">
         <div class="chart-card"><h4>Recuperación según el tiempo en tanques</h4><p class="small">Cuánto oro recupera la planta según las horas que la pulpa pasa en los tanques. El punto es la configuración actual.</p><div class="chart-box"><canvas id="ch-sim-tau"></canvas></div></div>
         <div class="chart-card">
           <div class="ctrl-row" style="margin:0 0 6px;justify-content:space-between"><h4 style="margin:0">Sensibilidad</h4><select id="sens-var" class="sel" aria-label="Variable de sensibilidad"></select></div>
@@ -582,14 +603,19 @@ ol.refs li{margin:0 0 10px}
     </div>
   </div>
 
-  <h2 class="sec-title">Tren de tanques de cianuración</h2>
-  <p class="sec-sub">La pulpa pasa por gravedad de un tanque al siguiente. En cada uno sigue disolviéndose oro: sube el oro en la solución y baja el que queda en la roca. Cambia el número o el tamaño de los tanques y verás cómo cambian el tiempo de residencia, la recuperación y los costos.</p>
+  <h2 class="sec-title">Tren de tanques de lixiviación</h2>
+  <p class="sec-sub">Las dos rutas lixivian en tanques agitados en serie: la pulpa pasa por gravedad de uno al siguiente y en cada uno se disuelve más oro. Elige la ruta y cambia el número o el tamaño de los tanques para ver el tiempo de residencia, la recuperación y los costos.</p>
   <div class="split">
     <aside class="side panel" aria-label="Tanques">
+      <div class="grp-title">Ruta</div>
+      <div class="seg seg-full" role="group" aria-label="Ruta de los tanques" style="margin:6px 0 10px">
+        <button id="tk-r-cn" aria-pressed="true">Cianuración</button>
+        <button id="tk-r-tu" aria-pressed="false">Tiourea</button>
+      </div>
       <div class="grp-title">Tanques y alimentación</div>
       <div id="tk-sliders"></div>
-      <button class="btn full" type="button" id="tk-size">Dimensionar para 30 h de residencia</button>
-      <p class="small" style="margin-top:10px">Usa el criterio de diseño de referencia: 30 h de residencia, tanques con altura 1,1 veces el diámetro y 90 % del volumen útil.</p>
+      <button class="btn full" type="button" id="tk-size"></button>
+      <p class="small" style="margin-top:10px" id="tk-size-note"></p>
     </aside>
     <div class="main-col">
       <div class="kpis tk-kpis" id="tk-kpis"></div>
@@ -627,7 +653,7 @@ ol.refs li{margin:0 0 10px}
         <div class="chart-card"><h4>Flujo de caja acumulado</h4><p class="small">Dinero acumulado año a año, en millones de US$. Empieza negativo por la inversión; donde cruza el cero, la inversión ya se recuperó.</p><div class="chart-box"><canvas id="ch-eco-cum"></canvas></div></div>
         <div class="chart-card"><h4>Rentabilidad según el precio del oro</h4><p class="small">Valor actual neto en millones de US$. Por encima de cero la ruta es rentable; por debajo, pierde dinero.</p><div class="chart-box"><canvas id="ch-eco-price"></canvas></div></div>
       </div>
-      <p class="small" style="margin-top:14px">La inversión en mina y resto de planta se estima escalando la de Soto Norte (US$625 M para 3.500 t/d) con la regla de los seis décimos; para plantas pequeñas esta extrapolación no está verificada y domina el resultado. Incluye además CAPEX y OPEX del circuito de acondicionamiento y lixiviación, el calentamiento de la pulpa si su temperatura supera la ambiente, tratamiento de residuos, costo de mina, conminución y recuperación final por tonelada, regalías del 4 % sobre el 80 % del precio internacional e impuesto de renta con depreciación lineal.</p>
+      <p class="small" style="margin-top:14px">Se evalúa la planta de beneficio: se supone que la mina ya opera y su costo se paga por tonelada (costo de mina, conminución y recuperación final). La inversión del resto de la planta parte de la planta comunitaria tipo del DNP (hasta 40 t/d, precios de 2021) y se escala con la regla de los seis décimos; no incluye desarrollo de mina, licencias ni capital de trabajo. Incluye además CAPEX y OPEX del circuito de acondicionamiento y lixiviación, el calentamiento de la pulpa si su temperatura supera la ambiente, tratamiento de residuos, costo de mina, conminución y recuperación final por tonelada, regalías del 4 % sobre el 80 % del precio internacional e impuesto de renta con depreciación lineal.</p>
     </div>
   </div>
 </section>
@@ -653,6 +679,7 @@ ol.refs li{margin:0 0 10px}
     <li>Petrography, microthermometry, and isotopy of the gold veins from Vetas, Santander (Colombia). <i>Earth Sciences Research Journal</i>, 24(1). <a href="https://revistas.unal.edu.co/index.php/esrj/article/download/63443/pdf">Enlace</a></li>
     <li>García Ramírez, C. A. y Uribe Portilla, E. Yacimiento de oro y plata Los Delirios, región de Vetas, Santander. <i>Boletín de Geología</i>, Universidad Industrial de Santander. <a href="https://revistas.uis.edu.co/index.php/revistaboletindegeologia/article/download/3957/4299/16869">Enlace</a></li>
     <li>Assessment of mining activity on arsenic contamination in surface water and sediments in southwestern area of Santurbán paramo, Colombia. <a href="https://agris.fao.org/search/en/records/65df4e180f3e94b9e5d72c58">Registro FAO AGRIS</a></li>
+    <li>Departamento Nacional de Planeación (2021). <i>Proyecto tipo: Construcción y dotación de una planta comunitaria para el beneficio de oro. Guía metodológica</i>. Bogotá: DNP.</li>
     <li>Aris Mining Corporation (2025). <i>NI 43-101 Technical Report: Prefeasibility Study for the Soto Norte Project, Santander, Colombia</i>.</li>
     <li>Análisis técnico comparativo del estado actual de títulos mineros de minería a pequeña escala en California, Santander, Colombia (2024). <i>DYNA</i>, 91(231), 143–152.</li>
     <li>Agencia Nacional de Minería (2023). <i>Proyecto La Elsy y Nueva Elsy, Vetas (Santander)</i>. Ficha de promoción minera.</li>
@@ -807,8 +834,8 @@ function simulate(route, P, opt){
   }
   const k = kref * (F/Fref) * Math.pow(cal.cond.p80/P.p80, n);
   const pp = pulp(P.feed, P.sol);
-  // tanques: en cianuración la geometría (N, D, H) fija el tiempo de residencia; en tiourea, τ fija el volumen
-  const geo = route==='cn' && P.tankN;
+  // tanques: si se dan N, D y H, la geometría fija el tiempo de residencia; si no, τ fija el volumen (N = 5)
+  const geo = !!P.tankN;
   let N = geo ? Math.round(P.tankN) : N_SERIES;
   let Vt = geo ? FILL*Math.PI/4*P.tankD*P.tankD*P.tankH : null;
   let tau = (opt && opt.tau) || (geo ? N*Vt/pp.Q : P.tau);
@@ -830,13 +857,14 @@ function simulate(route, P, opt){
   return { R, aPlant, k, kref, N, Vt, Q:pp.Q, V:N*Vt, Vreq:pp.Q*tau, LS:pp.LS, water:pp.water, Ms:pp.Ms,
            AuFeed, AuDis, AuGd: AuDis*24, AuSol: AuDis/pp.water, tails: P.ley*(1-R), cons, stoich, hab, Rinf:cal.Rinf, tau };
 }
-// perfil tanque por tanque (cianuración): extracción acumulada a la salida del tanque i = RTD de i tanques en serie
-function tankProfile(P){
-  const s = simulate('cn', P), cal = CAL[P.scen].cn, out = [];
+// perfil tanque por tanque: extracción acumulada a la salida del tanque i = RTD de i tanques en serie
+function tankProfile(P, route){
+  route = route || 'cn';
+  const s = simulate(route, P), cal = CAL[P.scen][route], out = [];
   for (let i=1;i<=s.N;i++){
     const ti = s.tau*i/s.N, a = cal.Rinf*plantAlpha(P.model, s.k, ti, i);
-    out.push({ i, tcum: ti, R: a, AuSol: s.AuFeed*a/s.water, tails: P.ley*(1-a),
-               nacn: (P.ley*a*2*49.01/196.97/1000 + cal.kd*P.C*s.LS*ti)*s.Ms });
+    const consT = route==='cn' ? P.ley*a*2*49.01/196.97/1000 + cal.kd*P.C*s.LS*ti : cal.a*Math.pow(P.C, TU_EXP)*s.LS*ti;
+    out.push({ i, tcum: ti, R: a, AuSol: s.AuFeed*a/s.water, tails: P.ley*(1-a), reag: consT*s.Ms });
   }
   return { s, out };
 }
@@ -879,8 +907,9 @@ function economics(route, P, E, sim){
   const epcm = direct*0.12;
   const cont = (direct+epcm)*0.30;
   const capexCircuit = direct+epcm+cont;
-  const capexExtra = 625e6*Math.pow(P.feed/3500, 0.6);   // mina y resto de planta, escalado de Soto Norte
-  const capex = capexCircuit + capexExtra;
+  const capexExtra = E.plantRef*Math.pow(P.feed/40, 0.6);   // resto de la planta de beneficio: planta comunitaria tipo DNP (hasta 40 t/d)
+  const capexOther = E.otherCapex || 0;                       // mina, licencias, capital de trabajo (dato del usuario)
+  const capex = capexCircuit + capexExtra + capexOther;
   // energía (doc.: 31,24 kW absorbidos de 44,9 instalados); potencia ∝ volumen o caudal
   const kWinst = 2.2*(sim.Q/Q_REF) + 7.5*sim.N*(sim.Vt/V_TANK) + 3*(sim.Q/Q_REF) + (route==='cn'?2.2*(sim.Ms/MS_REF):0);
   const kWabs = kWinst*31.24/44.9;
@@ -934,7 +963,7 @@ function economics(route, P, E, sim){
     const d = cf/Math.pow(1+E.rate,y);
     if (dpay===null && dcum+d>=0) dpay = y-1 + (-dcum)/d; dcum+=d;
   }
-  return { tyr, oz, revenue, royalty, capex, capexCircuit, capexExtra, heatKW, heatMWh, heatCost, eq, direct, epcm, cont, kWabs, MWh, energy, reag, reagents, waste, wasteDetail,
+  return { tyr, oz, revenue, royalty, capex, capexCircuit, capexExtra, capexOther, heatKW, heatMWh, heatCost, eq, direct, epcm, cont, kWabs, MWh, energy, reag, reagents, waste, wasteDetail,
            personnel, maint, lab, upstream, opexCircuit, opex, ebitda, tax, cf, flows, npv, irr, pay, dpay,
            costOzCircuit: oz>0? opexCircuit/oz : NaN, costOz: oz>0 ? (opex+royalty)/oz : NaN, margin: revenue>0? ebitda/revenue : NaN };
 }
@@ -961,6 +990,7 @@ const DEF = {
   scen:'proyecto', model:'GB', sizeMode:'modelo', Ea:20, Z:1.5,
   env:{ zone:'california', Tamb:17, o2:7.6 },
   tank:{ N:5, D:2.5, H:2.75 },
+  tankTu:{ N:5, D:1.75, H:1.95 }, tkRoute:'cn',
   common:{ ley:7.0, feed:20, sol:33, p80:75, alt:2005 },
   cn:{ pH:10.75, C:1.0, tau:30, T:17, target:90 },
   tu:{ pH:1.5, C:6, ratio:0.5, tau:10, T:17, target:95 }
@@ -1004,6 +1034,11 @@ const SPEC = {
     N:{lab:'Número de tanques en serie', u:'', min:1, max:10, step:1, rec:[1,10], note:'Más tanques en serie acercan el flujo a uno ideal y reducen la pulpa que sale antes de tiempo', d:0},
     D:{lab:'Diámetro de cada tanque', u:'m', min:1, max:6, step:0.05, rec:[1,6], note:'Base 2,5 m: con 5 tanques da ~30 h a 20 t/d', d:2},
     H:{lab:'Altura de cada tanque', u:'m', min:1, max:7, step:0.05, rec:[1,7], note:'Base 2,75 m (1,1 veces el diámetro); se usa el 90 % del volumen', d:2}
+  },
+  tankTu:{
+    N:{lab:'Número de tanques en serie', u:'', min:1, max:10, step:1, rec:[1,10], note:'Más tanques en serie acercan el flujo a uno ideal y reducen la pulpa que sale antes de tiempo', d:0},
+    D:{lab:'Diámetro de cada tanque', u:'m', min:1, max:6, step:0.05, rec:[1,6], note:'Base 1,75 m: con 5 tanques da ~10 h a 20 t/d', d:2},
+    H:{lab:'Altura de cada tanque', u:'m', min:1, max:7, step:0.05, rec:[1,7], note:'Base 1,95 m (1,1 veces el diámetro); se usa el 90 % del volumen', d:2}
   },
   kin:{
     Ea:{lab:'Energía de activación difusional', u:'kJ/mol', min:8, max:20, step:0.5, rec:[8,20], note:'Rango para control difusional (Marsden). Solo influye si la temperatura difiere de la del ajuste', d:1},
@@ -1068,7 +1103,7 @@ function params(route){
            ley:S.common.ley, feed:S.common.feed, sol:S.common.sol, p80:S.common.p80, alt:S.common.alt,
            pH:r.pH, C:r.C, tau:r.tau, T:r.T, Tamb:S.env.Tamb, ratio:0.5,
            O2: S.env.zone==='custom' ? S.env.o2 : null,
-           ...(route==='cn' ? {tankN:S.tank.N, tankD:S.tank.D, tankH:S.tank.H} : {}) };
+           ...(route==='cn' ? {tankN:S.tank.N, tankD:S.tank.D, tankH:S.tank.H} : {tankN:S.tankTu.N, tankD:S.tankTu.D, tankH:S.tankTu.H}) };
 }
 
 // ---------- pestañas ----------
@@ -1333,7 +1368,7 @@ function alertsFor(route, P, s){
   const A = [];
   const outs = [];
   for (const [k,spc] of Object.entries(SPEC.common)) if (S.common[k] < spc.rec[0]-1e-9 || S.common[k] > spc.rec[1]+1e-9) outs.push(spc.lab.toLowerCase());
-  for (const [k,spc] of Object.entries(SPEC[route])) if (k!=='target' && (S[route][k] < spc.rec[0]-1e-9 || S[route][k] > spc.rec[1]+1e-9)) outs.push(spc.lab.toLowerCase());
+  for (const [k,spc] of Object.entries(SPEC[route])) if (k!=='target' && k!=='tau' && (S[route][k] < spc.rec[0]-1e-9 || S[route][k] > spc.rec[1]+1e-9)) outs.push(spc.lab.toLowerCase());
   if (outs.length) A.push(['warn','Fuera del rango recomendado', `${outs.join(', ')}: el simulador calcula el resultado, pero fuera de los valores ensayados es una extrapolación.`]);
   if (route==='cn'){
     if (P.pH < 10.2) A.push(['warn','Riesgo de gas HCN', `A este pH el ${f(100*(1-fracCN(P.pH)),0)} % del cianuro se convierte en HCN, un gas tóxico.`]);
@@ -1470,6 +1505,8 @@ const ECO_DEF = {
   pAcid:{lab:'Precio del H₂SO₄', u:'US$/t', v:300, s:'', show:1},
   acid:{lab:'Consumo de H₂SO₄ (tiourea)', u:'kg/t', v:15, s:'Sin ensayo: depende de la ganga', show:1},
   ferric:{lab:'Consumo de Fe₂(SO₄)₃ (tiourea)', u:'kg/t', v:2, s:'Sin ensayo: reposición del oxidante', show:1},
+  plantRef:{lab:'Planta de beneficio de referencia (40 t/d)', u:'US$', v:725150, s:'DNP 2021: COP 2.714 millones a TRM 3.743; precios de 2021', show:1},
+  otherCapex:{lab:'Otras inversiones (mina, licencias, capital de trabajo)', u:'US$', v:0, s:'Sin dato verificable para la zona: escríbelo si lo conoces', show:1},
   heatEff:{lab:'Rendimiento del calentador eléctrico', u:'%', v:100, s:'Fracción de la electricidad que llega como calor a la pulpa', show:1},
   tax:{lab:'Impuesto de renta', u:'%', v:35, s:'Tarifa general en Colombia', show:1},
   rate:{lab:'Tasa de descuento', u:'%', v:10, s:'', show:1},
@@ -1482,7 +1519,7 @@ function ecoParams(){
   return { price:g('price'), rate:g('rate')/100, life:Math.max(1,Math.round(g('life'))), tax:g('tax')/100, royalty:g('royalty')/100, royaltyBase:0.8,
     days:g('days'), recDown:g('recDown')/100, upstream:g('upstream'), elec:g('elec'), pNaCN:g('pNaCN'), pLime:g('pLime'),
     pTu:g('pTu'), pAcid:g('pAcid'), acid:g('acid'), ferric:g('ferric'), pFerric:g('pFerric'), pSMBS:g('pSMBS'), so2Factor:g('so2Factor'), fmat:g('fmat'),
-    heatEff:Math.max(0.05,g('heatEff')/100), recycle:g('recycle')/100, costDosed:false, incWaste:true };
+    heatEff:Math.max(0.05,g('heatEff')/100), plantRef:g('plantRef'), otherCapex:g('otherCapex'), recycle:g('recycle')/100, costDosed:false, incWaste:true };
 }
 function mountEco(){
   document.getElementById('eco-inputs').innerHTML = Object.entries(ECO).filter(([k,o])=>o.show).map(([k,o])=>`<div class="inp"><label for="e-${k}">${o.lab}</label>
@@ -1492,7 +1529,7 @@ function mountEco(){
 }
 const money = x => (x<0?'−':'') + 'US$ ' + f(Math.abs(x),0);
 const kmoney = x => (x<0?'−':'') + 'US$ ' + (Math.abs(x)>=1e6? f(Math.abs(x)/1e6,2)+' M' : f(Math.abs(x)/1e3,0)+' k');
-const yrs = x => x===null? 'No se recupera' : f(x,1)+' años';
+const yrs = x => x===null? 'No se recupera en la vida útil' : x<1 ? f(x*12,1)+' meses' : f(x,1)+' años';
 function renderEco(){
   const E = ecoParams();
   const R = {}; for (const route of ['cn','tu']){ const P = params(route); const s = simulate(route,P); R[route] = {P, s, e: economics(route, P, E, s)}; }
@@ -1503,7 +1540,7 @@ function renderEco(){
   document.getElementById('eco-kpis').innerHTML =
     kp('Valor actual neto (VAN)', a.npv, b.npv, kmoney, `Ganancia total traída a hoy, con ${f(E.rate*100,0)} % de descuento en ${E.life} años`) +
     kp('Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,1)+' %', 'Rentable si supera la tasa de descuento') +
-    kp('Recuperación de la inversión', a.pay, b.pay, yrs, 'Años hasta recuperar lo invertido');
+    kp('Recuperación de la inversión', a.pay, b.pay, yrs, 'Tiempo hasta que el flujo de caja acumulado cubre la inversión');
   { for (const r of ['cn','tu']){ const d = Math.max(0, S[r].T - S.env.Tamb), inp = document.getElementById('eh-'+r);
       inp.max = Math.min(30, 60 - S.env.Tamb); if (document.activeElement!==inp) inp.value = d;
       document.getElementById('eh-'+r+'-v').textContent = f(d,1);
@@ -1524,7 +1561,8 @@ function renderEco(){
     ['Ingresos por venta', a.revenue, b.revenue, money],
     sec('2. Inversión'),
     ['Circuito de lixiviación', a.capexCircuit, b.capexCircuit, money],
-    ['Mina y resto de planta (estimación)', a.capexExtra, b.capexExtra, money],
+    ['Resto de la planta de beneficio (referencia DNP)', a.capexExtra, b.capexExtra, money],
+    ['Otras inversiones (dato del usuario)', a.capexOther, b.capexOther, money],
     ['Inversión total (CAPEX)', a.capex, b.capex, money, true],
     sec('3. Costos anuales de operación'),
     ['Reactivos', a.reagents, b.reagents, money],
@@ -1579,13 +1617,15 @@ function renderSources(){
     ['Recuperación en planta', String.raw`\[ R=R_\infty\int_{0}^{\infty}\alpha(k\,t)\,E(t)\,dt,\qquad E(t)=\frac{(N/\tau)^{N}\,t^{\,N-1}\,e^{-Nt/\tau}}{(N-1)!} \]`,
       'Distribución de tiempos de residencia de N tanques agitados de mezcla perfecta en serie. R∞ es la fracción máxima de oro lixiviable.'],
     ['Caudal de pulpa y tamaño de tanques', String.raw`\[ Q=\frac{\dot M_s}{\rho_s}+\frac{\dot M_s\,(1-C_w)}{C_w\,\rho_l},\qquad V_{t}=0{,}9\,\frac{\pi D^{2}H}{4},\quad \tau=\frac{N\,V_{t}}{Q} \]`,
-      'Con ρ<sub>s</sub> = 2,70 t/m³ y ρ<sub>l</sub> = 1,00 t/m³. En cianuración, el número N y las dimensiones D × H de los tanques fijan el tiempo de residencia τ (90 % del volumen es útil); en tiourea τ se elige y V<sub>t</sub> = Qτ/N con N = 5. El costo de los equipos escala con (V/V<sub>ref</sub>)<sup>0,6</sup>.'],
+      'Con ρ<sub>s</sub> = 2,70 t/m³ y ρ<sub>l</sub> = 1,00 t/m³. En ambas rutas, el número N y las dimensiones D × H de los tanques fijan el tiempo de residencia τ (90 % del volumen es útil). El costo de los equipos escala con (V/V<sub>ref</sub>)<sup>0,6</sup>.'],
     ['Calentamiento de la pulpa', String.raw`\[ \dot Q=\left(\dot m_s\,c_{p,s}+\dot m_w\,c_{p,w}\right)\left(T-T_{amb}\right) \]`,
       'Solo cuando la pulpa se opera por encima de la temperatura ambiente. c<sub>p,w</sub> = 4,186 kJ/kg·K (agua) y c<sub>p,s</sub> ≈ 0,8 kJ/kg·K (valor típico de rocas silicatadas). Se supone calentamiento eléctrico sin pérdidas, por lo que el costo es un mínimo.'],
     ['Consumo de reactivos', String.raw`\[ c_{NaCN}=c_{est}+k_d\,C\,\frac{L}{S}\,\tau,\qquad c_{Tu}=a\,C^{\,1{,}37}\,\frac{L}{S}\,\tau \]`,
       'Degradación proporcional a la concentración y al tiempo. k<sub>d</sub> se ajusta a 0,50 kg/t con 1,0 g/L y 30 h; a y el exponente 1,37 se ajustan a 23 kg/t con 6 g/L y al aumento de 4–5 veces al pasar de 2 a 6 g/L (Carrillo et al.).'],
     ['Indicadores económicos', String.raw`\[ \mathrm{VAN}=\sum_{t=0}^{n}\frac{FC_t}{(1+i)^{t}},\qquad \sum_{t=0}^{n}\frac{FC_t}{(1+\mathrm{TIR})^{t}}=0 \]`,
-      'FC₀ = −CAPEX. Para t ≥ 1, FC = ingresos − regalías − OPEX − impuesto, con depreciación lineal durante la vida útil.']
+      'FC₀ = −CAPEX. Para t ≥ 1, FC = ingresos − regalías − OPEX − impuesto, con depreciación lineal durante la vida útil. Recuperación de la inversión: año en que el flujo acumulado llega a cero.'],
+    ['Inversión de la planta', String.raw`\[ \mathrm{CAPEX}=C_{circuito}+C_{ref}\left(\frac{\text{t/d}}{40}\right)^{0{,}6} \]`,
+      'C<sub>ref</sub>: planta comunitaria tipo del DNP (hasta 40 t/d, COP 2.714 millones de 2021). C<sub>circuito</sub>: tanques, acondicionamiento y reactivos (Tabla 8 del documento) escalados con la regla de los seis décimos.']
   ];
   document.getElementById('eq-just').innerHTML = EQ.map(([t,e,j])=>`<div class="card"><h3>${t}</h3><div class="eqn">${e}</div><p class="small">${j}</p></div>`).join('');
 }
@@ -1601,47 +1641,63 @@ function render(){
 
 
 
-// ---------- tren de tanques de cianuración ----------
+// ---------- tren de tanques (ambas rutas) ----------
+const TK_TARGET = {cn:30, tu:10};
+const tkObj = () => S.tkRoute==='cn' ? S.tank : S.tankTu;
+const tkGroup = () => S.tkRoute==='cn' ? 'tank' : 'tankTu';
+function mountTankSliders(){
+  const g = tkGroup();
+  mountSliders('tk-sliders','tk', [[g,'N'],[g,'D'],[g,'H'],['common','feed']]);
+  document.getElementById('tk-r-cn').setAttribute('aria-pressed', S.tkRoute==='cn');
+  document.getElementById('tk-r-tu').setAttribute('aria-pressed', S.tkRoute==='tu');
+  const t = TK_TARGET[S.tkRoute];
+  document.getElementById('tk-size').textContent = `Dimensionar para ${t} h de residencia`;
+  document.getElementById('tk-size-note').textContent = S.tkRoute==='cn'
+    ? 'Criterio del documento de referencia: 30 h de residencia, altura 1,1 veces el diámetro y 90 % del volumen útil.'
+    : 'Usa las 10 h del ensayo de tiourea, altura 1,1 veces el diámetro y 90 % del volumen útil, igual que en cianuración.';
+}
 function sizeTanks(){
-  const P = params('cn'), pp = pulp(P.feed, P.sol);
-  const vgeo = pp.Q*30/S.tank.N/(49.8/55.3);
+  const r = S.tkRoute, T = tkObj(), P = params(r), pp = pulp(P.feed, P.sol);
+  const vgeo = pp.Q*TK_TARGET[r]/T.N/(49.8/55.3);
   const D = Math.cbrt(4*vgeo/(Math.PI*1.1));
-  S.tank.D = Math.ceil(D*20)/20; S.tank.H = Math.ceil(1.1*S.tank.D*20)/20; schedule();
+  T.D = Math.ceil(D*20)/20; T.H = Math.ceil(1.1*T.D*20)/20; schedule();
 }
 function renderTanks(){
-  const P = params('cn'), {s, out} = tankProfile(P);
-  const req = Math.ceil(s.Q*30/s.Vt - 0.02);
+  const r = S.tkRoute, T = tkObj(), P = params(r), {s, out} = tankProfile(P, r), tgt = TK_TARGET[r];
+  const req = Math.ceil(s.Q*tgt/s.Vt - 0.02);
   const air = 45*s.Ms/(80/24);
+  const tag = i => `TK-${(r==='cn'?800:900)+i}`;
   document.getElementById('tk-kpis').innerHTML = `
     <div class="kpi"><div class="v">${f(s.Q,2)}</div><div class="l">m³/h de pulpa</div></div>
     <div class="kpi"><div class="v">${f(s.Ms,2)}</div><div class="l">t/h de mineral</div></div>
     <div class="kpi"><div class="v">${f(s.tau,1)} h</div><div class="l">de residencia total</div></div>
-    <div class="kpi"><div class="v">${s.N} / ${req}</div><div class="l">tanques instalados / necesarios para 30 h</div></div>
+    <div class="kpi"><div class="v">${s.N} / ${req}</div><div class="l">tanques instalados / necesarios para ${tgt} h</div></div>
     <div class="kpi"><div class="v">${f(s.R*100,1)} %</div><div class="l">de oro recuperado</div></div>
-    <div class="kpi"><div class="v">${f(air,1)}</div><div class="l">m³/h de aire (0,30 kg O₂/t)</div></div>`;
+    ${r==='cn' ? `<div class="kpi"><div class="v">${f(air,1)}</div><div class="l">m³/h de aire (0,30 kg O₂/t)</div></div>`
+               : `<div class="kpi"><div class="v">${f(out[out.length-1].reag,2)}</div><div class="l">kg/h de tiourea consumida</div></div>`}`;
   // dibujo
-  const N = s.N, W = 1000, Hsvg = 420, gap = 800/N, pxm = Math.min(gap*0.6/S.tank.D, 190/S.tank.H);
-  const tw = S.tank.D*pxm, th = S.tank.H*pxm, top0 = 130, drop = Math.min(14, 60/N);
+  const N = s.N, W = 1000, Hsvg = 420, gap = 800/N, pxm = Math.min(gap*0.6/T.D, 190/T.H);
+  const tw = T.D*pxm, th = T.H*pxm, top0 = 130, drop = Math.min(14, 60/N);
   const mix = (a,b,t)=> Math.round(a+(b-a)*t);
   const col = t => `rgb(${mix(185,224,t)},${mix(182,164,t)},${mix(172,72,t)})`;
   let g = `<defs><marker id="tka" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1F1F1D"/></marker></defs>`;
   const xs = i => 130 + gap*i + (gap-tw)/2, ys = i => top0 + drop*i;
-  // tubería de aire
-  g += `<path d="M100 ${ys(N-1)+th+30} H ${xs(N-1)+tw}" fill="none" stroke="#0072B2" stroke-width="2" stroke-dasharray="6 5" class="flowdash"/><text x="10" y="${ys(N-1)+th+20}" font-size="16" fill="#0072B2" font-family="Manrope, sans-serif">Aire ${f(air,1)} m³/h</text>`;
+  // tubería de aire (solo cianuración)
+  if (r==='cn') g += `<path d="M100 ${ys(N-1)+th+30} H ${xs(N-1)+tw}" fill="none" stroke="#0072B2" stroke-width="2" stroke-dasharray="6 5" class="flowdash"/><text x="10" y="${ys(N-1)+th+20}" font-size="16" fill="#0072B2" font-family="Manrope, sans-serif">Aire ${f(air,1)} m³/h</text>`;
   // entrada
   g += `<path d="M10 ${ys(0)+18} H ${xs(0)-4}" stroke="#1F1F1D" stroke-width="2.5" fill="none" marker-end="url(#tka)" class="flowdash-solid"/><text x="10" y="${ys(0)+6}" font-size="16" font-family="Manrope, sans-serif" fill="#1F1F1D">Entrada</text><text x="10" y="${ys(0)+40}" font-size="16" font-weight="700" font-family="Manrope, sans-serif" fill="#0072B2">${f(s.Q,2)} m³/h</text>`;
   out.forEach((o,i)=>{
     const x = xs(i), y = ys(i), lvl = y + th*0.1;
     const t = o.R/Math.max(0.01,s.Rinf);
-    g += `<g class="tkg" data-i="${i}" tabindex="0" role="button" aria-label="TK-${800+o.i}: ver detalle">
+    g += `<g class="tkg" data-i="${i}" tabindex="0" role="button" aria-label="${tag(o.i)}: ver detalle">
       <rect x="${x-8}" y="${y-64}" width="${tw+16}" height="${th+72}" fill="transparent"/>
       <path d="M${x} ${y} V ${y+th-10} Q ${x} ${y+th} ${x+10} ${y+th} H ${x+tw-10} Q ${x+tw} ${y+th} ${x+tw} ${y+th-10} V ${y}" fill="#F7F7F5" stroke="#1F1F1D" stroke-width="2"/>
       <rect x="${x+2}" y="${lvl}" width="${tw-4}" height="${th-(lvl-y)-2}" rx="6" fill="${col(t)}" opacity=".85"/>
       <line x1="${x+tw/2}" y1="${y-26}" x2="${x+tw/2}" y2="${y+th*0.78}" stroke="#1F1F1D" stroke-width="2"/>
       <g class="spin" style="transform-origin:${x+tw/2}px ${y+th*0.78}px"><line x1="${x+tw/2-tw*0.22}" y1="${y+th*0.78}" x2="${x+tw/2+tw*0.22}" y2="${y+th*0.78}" stroke="#1F1F1D" stroke-width="3"/></g>
       <rect x="${x+tw/2-14}" y="${y-44}" width="28" height="18" rx="3" fill="#1F1F1D"/>
-      <line x1="${x+tw*0.75}" y1="${ys(N-1)+th+30}" x2="${x+tw*0.75}" y2="${y+th-6}" stroke="#0072B2" stroke-width="1.5"/>
-      <text x="${x+tw/2}" y="${y-54}" text-anchor="middle" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">TK-${800+o.i}</text>
+      ${r==="cn"?`<line x1="${x+tw*0.75}" y1="${ys(N-1)+th+30}" x2="${x+tw*0.75}" y2="${y+th-6}" stroke="#0072B2" stroke-width="1.5"/>`:""}
+      <text x="${x+tw/2}" y="${y-54}" text-anchor="middle" font-size="17" font-weight="700" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">${tag(o.i)}</text>
       <text x="${x+tw/2}" y="${y+th*0.45}" text-anchor="middle" paint-order="stroke" stroke="#F7F7F5" stroke-width="5" font-size="${Math.max(15,Math.min(24, tw/4))}" font-weight="700" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">${f(o.R*100,0)} %</text>
     </g>`;
     if (i < N-1){ const x2 = xs(i+1), y2 = ys(i+1);
@@ -1649,17 +1705,18 @@ function renderTanks(){
   });
   const xl = xs(N-1)+tw, yl = ys(N-1)+th*0.1+8;
   g += `<path d="M${xl} ${yl} H ${W-10}" stroke="#1F1F1D" stroke-width="2.5" fill="none" marker-end="url(#tka)" class="flowdash-solid"/><text x="${W-10}" y="${yl-12}" text-anchor="end" font-size="16" font-family="Manrope, sans-serif">A filtrado</text>`;
-  g += `<text x="20" y="34" font-size="17" font-family="Manrope, sans-serif" fill="#6E6D68">Cada tanque: Ø ${f(S.tank.D,2)} × ${f(S.tank.H,2)} m · ${f(s.Vt,1)} m³ útiles · ${f(s.tau/N,1)} h de residencia · agitador de ${f(7.5*s.Vt/49.8,1)} kW</text>`;
-  document.getElementById('tk-svg').innerHTML = `<div class="tk-tip" id="tk-tip" hidden></div><svg viewBox="0 0 ${W} ${Math.max(Hsvg-60, ys(N-1)+th+60)}" class="flow-svg" style="min-width:0;width:100%" role="img" aria-label="Serie de ${N} tanques de cianuración">${g}</svg>`;
+  g += `<text x="20" y="34" font-size="17" font-family="Manrope, sans-serif" fill="#6E6D68">${r==='cn'?'Cianuración':'Tiourea'} · cada tanque: Ø ${f(T.D,2)} × ${f(T.H,2)} m · ${f(s.Vt,1)} m³ útiles · ${f(s.tau/N,1)} h de residencia · agitador de ${f(7.5*s.Vt/49.8,1)} kW</text>`;
+  document.getElementById('tk-svg').innerHTML = `<div class="tk-tip" id="tk-tip" hidden></div><svg viewBox="0 0 ${W} ${Math.max(Hsvg-60, ys(N-1)+th+60)}" class="flow-svg" style="min-width:0;width:100%" role="img" aria-label="Serie de ${N} tanques de lixiviación">${g}</svg>`;
   const box = document.getElementById('tk-svg'), tip = document.getElementById('tk-tip');
   const show = (gEl)=>{ const o = out[+gEl.dataset.i], prev = o.i>1 ? out[o.i-2] : null;
-    tip.innerHTML = `<b>TK-${800+o.i}</b> · tanque ${o.i} de ${N}
+    tip.innerHTML = `<b>${tag(o.i)}</b> · tanque ${o.i} de ${N}
       <div><span>Tiempo en este tanque</span><em>${f(s.tau/N,1)} h</em></div>
       <div><span>Tiempo acumulado</span><em>${f(o.tcum,1)} h</em></div>
       <div><span>Oro recuperado a la salida</span><em>${f(o.R*100,1)} %</em></div>
       <div><span>Ganado en este tanque</span><em>+${f((o.R-(prev?prev.R:0))*100,1)} %</em></div>
       <div><span>Oro en la solución</span><em>${f(o.AuSol,2)} mg/L</em></div>
       <div><span>Oro que queda en el sólido</span><em>${f(o.tails,2)} g/t</em></div>
+      <div><span>${r==='cn'?'NaCN':'Tiourea'} consumido hasta aquí</span><em>${f(o.reag,2)} kg/h</em></div>
       <div><span>Pulpa que pasa</span><em>${f(s.Q,2)} m³/h · ${f(s.Ms,2)} t/h</em></div>`;
     tip.hidden = false;
     const bb = gEl.getBoundingClientRect(), wb = box.getBoundingClientRect();
@@ -1671,9 +1728,9 @@ function renderTanks(){
     gEl.addEventListener('click', ()=>show(gEl));
     gEl.addEventListener('mouseleave', ()=>{ tip.hidden = true; }); gEl.addEventListener('blur', ()=>{ tip.hidden = true; }); });
   const c = CH['ch-tanks'];
-  c.data.labels = out.map(o=>`TK-${800+o.i} (${f(o.tcum,1)} h)`);
+  c.data.labels = out.map(o=>`${tag(o.i)} (${f(o.tcum,1)} h)`);
   c.data.datasets = [
-    {type:'bar', label:'Oro recuperado acumulado (%)', data: out.map(o=>o.R*100), backgroundColor:'#E0A448', borderRadius:6, yAxisID:'y'},
+    {type:'bar', label:'Oro recuperado acumulado (%)', data: out.map(o=>o.R*100), backgroundColor: r==='cn'?'#56B4E9':'#E69F00', borderRadius:6, yAxisID:'y'},
     {type:'line', label:'Oro en solución (mg/L)', data: out.map(o=>o.AuSol), borderColor:'#0072B2', backgroundColor:'#0072B2', pointRadius:5, borderWidth:3, yAxisID:'y2'}];
   c.update();
 }
@@ -1757,8 +1814,7 @@ mountSliders('common-sliders','sim', ['ley','feed','sol','p80'].map(k=>['common'
 mountSliders('sim-env-sliders','sim', [['common','alt'],['env','Tamb'],['env','o2']]);
 mountSliders('kin-env-sliders','kin', [['common','alt'],['env','Tamb'],['env','o2']]);
 mountSliders('cn-sliders','sim', Object.keys(SPEC.cn).map(k=>['cn',k]));
-mountSliders('tk-sliders','tk', [['tank','N'],['tank','D'],['tank','H'],['common','feed']]);
-mountSliders('tu-sliders','sim', Object.keys(SPEC.tu).map(k=>['tu',k]));
+mountSliders('tu-sliders','sim', Object.keys(SPEC.tu).filter(k=>k!=='tau').map(k=>['tu',k]));
 mountSliders('kin-sliders','kin', [['kin','Ea'],['kin','Z']]);
 mountSliders('flow-sliders','flow', [['common','feed','Mineral alimentado a trituración'],['common','sol']]);
 mountSliders('kin-op-sliders','kin', [['common','p80'],['cn','C','NaCN (cianuración)'],['cn','pH','pH (cianuración)'],['cn','T','Temperatura (cianuración)'],['tu','C','Tiourea'],['tu','T','Temperatura (tiourea)']]);
@@ -1768,7 +1824,7 @@ document.getElementById('size-modelo').addEventListener('click', ()=>{ S.sizeMod
 document.getElementById('size-lineal').addEventListener('click', ()=>{ S.sizeMode='lineal'; schedule(); });
 document.querySelectorAll('.reset-btn').forEach(btn=> btn.addEventListener('click', ()=>{
   const d = JSON.parse(JSON.stringify(DEF));
-  Object.assign(S.env, d.env); Object.assign(S.tank, d.tank); Object.assign(S.common, d.common); Object.assign(S.cn, d.cn); Object.assign(S.tu, d.tu);
+  Object.assign(S.env, d.env); Object.assign(S.tank, d.tank); Object.assign(S.tankTu, d.tankTu); Object.assign(S.common, d.common); Object.assign(S.cn, d.cn); Object.assign(S.tu, d.tu);
   S.Ea = d.Ea; S.Z = d.Z; S.sizeMode = d.sizeMode; setZ(S.Z); schedule();
 }));
 lineChart('ch-kin-cn','Tiempo (h)','Recuperación (%)');
@@ -1781,6 +1837,8 @@ CH['ch-tanks'] = new Chart(document.getElementById('ch-tanks'), { type:'bar', da
   scales:{ y:{min:0,max:100,title:{display:true,text:'Oro recuperado (%)'}}, y2:{type:'linear',position:'right',min:0,title:{display:true,text:'Oro en solución (mg/L)'},grid:{drawOnChartArea:false}}, x:{grid:{display:false}} },
   plugins:{legend:{position:'bottom'}} } });
 document.getElementById('tk-size').addEventListener('click', sizeTanks);
+for (const r of ['cn','tu']) document.getElementById('tk-r-'+r).addEventListener('click', ()=>{ S.tkRoute = r; mountTankSliders(); schedule(); });
+mountTankSliders();
 for (const r of ['cn','tu']) document.getElementById('eh-'+r).addEventListener('input', e=>{ S[r].T = Math.min(60, S.env.Tamb + parseFloat(e.target.value)); schedule(); });
 lineChart('ch-eco-cum','Año','Millones de US$',{yd:2, x:{min:0}});
 lineChart('ch-eco-price','Precio del oro (US$/oz)','VAN (millones de US$)',{yd:2});
