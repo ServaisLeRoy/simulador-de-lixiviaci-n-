@@ -305,15 +305,19 @@ body.modal-open{overflow:hidden}
 
 .tkg{cursor:pointer}.tkg:focus{outline:none}.tkg:hover path,.tkg:focus-visible path{stroke:#8A5A12;stroke-width:3}
 .pinfo{position:relative;display:inline-block;vertical-align:middle;margin-left:14px}
-.pinfo-btn{width:34px;height:34px;border-radius:50%;border:1.5px solid #1F1F1D;background:#F7F7F5;color:#1F1F1D;font:700 18px/1 'Instrument Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
-.pinfo-btn:hover,.pinfo-btn:focus-visible,.pinfo.open .pinfo-btn{background:#1F1F1D;color:#F7F7F5;outline:none}
-.pinfo-pop{display:none;position:absolute;left:0;top:44px;z-index:30;width:min(440px,86vw);background:#1F1F1D;color:#F7F7F5;border-radius:14px;padding:14px 16px;font-size:14px;line-height:1.45;box-shadow:0 8px 24px rgba(0,0,0,.18);text-align:left;letter-spacing:0;font-weight:400}
-.pinfo:hover .pinfo-pop,.pinfo:focus-within .pinfo-pop,.pinfo.open .pinfo-pop{display:block}
-.pinfo-pop b{font-family:'Instrument Sans',sans-serif;font-size:15px;display:block;margin-bottom:6px}
-.pinfo-pop ul{margin:6px 0 0;padding-left:18px}.pinfo-pop li{margin:3px 0}
-.pinfo-pop .k{color:#cfcdc6;margin-top:8px;display:block}
-@media (max-width:640px){.pinfo{position:static}.pinfo-pop{position:fixed;left:12px;right:12px;top:84px;width:auto;max-height:72vh;overflow:auto}}
-.pinfo-pop{text-transform:none}
+.pinfo-btn{position:relative;z-index:31;width:30px;height:30px;border-radius:50%;border:1.5px solid #6E6D68;background:transparent;color:#6E6D68;font:600 16px/1 'Instrument Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.pinfo-btn:hover,.pinfo.open .pinfo-btn{border-color:#1F1F1D;color:#1F1F1D}
+.pinfo-btn:focus-visible{outline:2px solid #0072B2;outline-offset:2px}
+.pinfo-pop{display:none;position:absolute;left:0;top:calc(100% + 10px);text-wrap:wrap;white-space:normal;z-index:30;width:min(460px,86vw);background:#FFFFFF;color:#1F1F1D;border:1px solid #D7D6D1;border-radius:12px;padding:18px 20px;font:400 14.5px/1.6 Manrope,sans-serif;letter-spacing:0;text-transform:none;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.pinfo.open .pinfo-pop{display:block}
+.pinfo-pop *{text-wrap:wrap}
+.pinfo-pop b{display:block;padding-right:28px;font:600 15.5px/1.4 'Instrument Sans',sans-serif;margin-bottom:12px}
+.pinfo-pop .k{display:block;color:#6E6D68;font-size:13.5px;margin:14px 0 6px}
+.pinfo-pop ul{margin:0;padding-left:18px}.pinfo-pop li{margin:0 0 8px}
+.pinfo-x{position:absolute;top:10px;right:12px;border:0;background:none;font:400 22px/1 Manrope,sans-serif;color:#6E6D68;cursor:pointer;padding:4px}
+.pinfo-x:hover{color:#1F1F1D}
+.pinfo-pop .nt{display:block;color:#6E6D68;font-size:13.5px;margin-top:14px;padding-top:12px;border-top:1px solid #E6E5E0}
+@media (max-width:640px){.pinfo{position:static}.pinfo-pop{position:fixed;left:12px;right:12px;top:84px;width:auto;max-height:72vh;overflow:auto;z-index:40}}
 .tk-tip{position:absolute;z-index:5;width:290px;background:#1F1F1D;color:#F7F7F5;border-radius:14px;padding:12px 14px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none}
 .tk-tip b{font-family:'Instrument Sans',sans-serif;font-size:16px}
 .tk-tip div{display:flex;justify-content:space-between;gap:10px;margin-top:5px;border-top:1px solid rgba(255,255,255,.12);padding-top:5px}
@@ -638,7 +642,7 @@ ol.refs li{margin:0 0 10px}
 
 <section class="tab" id="tab-economia">
 <div class="intro"><div>  
-  <h1 class="hero">Evaluación económica<span class="pinfo" id="pinfo"><button type="button" class="pinfo-btn" aria-label="Ajuste de precios de reactivos: fecha e implicaciones" aria-expanded="false" aria-controls="pinfo-pop">i</button><span class="pinfo-pop" id="pinfo-pop" role="tooltip"><b>Precios de reactivos ajustados el 13 de noviembre de 2026</b>
+  <h1 class="hero">Evaluación económica<span class="pinfo" id="pinfo"><button type="button" class="pinfo-btn" aria-label="Ajuste de precios de reactivos: fecha e implicaciones" aria-expanded="false" aria-controls="pinfo-pop">i</button><span class="pinfo-pop" id="pinfo-pop" role="dialog" aria-label="Ajuste de precios de reactivos"><button type="button" class="pinfo-x" aria-label="Cerrar">×</button><b>Precios de reactivos ajustados el 13 de noviembre de 2026</b>
 <ul><li>Metabisulfito de sodio: US$ 500 → 700/t (Brasil, 2.º trimestre de 2026: US$ 704/t).</li>
 <li>Cal viva: US$ 390 → 250/t (EE. UU., en planta: ~US$ 260/t; Brasil: ~US$ 156/t).</li>
 <li>Sin cambio, dentro de los rangos de 2026: NaCN 2.500, tiourea 2.100, ácido sulfúrico 300 y sulfato férrico 350 US$/t.</li></ul>
@@ -646,7 +650,7 @@ ol.refs li{margin:0 0 10px}
 <ul><li>Cianuración: tratamiento de efluentes 2,74 → 3,84 US$/t y reactivos 1,72 → 1,56 US$/t; costo mensual +US$ 546; VAN 6,23 → 6,21 M; payback sin cambio (mes 17).</li>
 <li>Tiourea: neutralización con cal 3,64 → 2,33 US$/t; costo mensual −US$ 765; VAN 6,26 → 6,30 M; payback sin cambio (mes 17).</li>
 <li>Con mina propia el efecto es similar: VAN 14,95 → 14,92 M (cianuración) y 14,93 → 14,97 M (tiourea).</li></ul>
-<span class="k">Son precios de referencia de importación; el precio entregado en planta (flete, distribuidor, sustancias controladas) puede ser mayor.</span></span></span></h1>
+<span class="nt">Son precios de referencia de importación; el precio entregado en planta (flete, distribuidor, sustancias controladas) puede ser mayor.</span></span></span></h1>
 </div><div>  <p class="lede">Estima si cada ruta gana dinero con el oro que recupera en la simulación. Ajusta el precio del oro, el origen del mineral y los costos a la izquierda. La recuperación, los tanques y el consumo de reactivo vienen de la pestaña Simulación.</p></div></div>
 
   <div class="split" style="margin-top:30px">
@@ -1881,6 +1885,7 @@ function render(){
 (function(){ const w = document.getElementById('pinfo'); if (!w) return; const b = w.querySelector('button');
   b.addEventListener('click', e=>{ e.stopPropagation(); const o = w.classList.toggle('open'); b.setAttribute('aria-expanded', o); });
   document.addEventListener('click', e=>{ if (!w.contains(e.target)){ w.classList.remove('open'); b.setAttribute('aria-expanded', false); } });
+  w.querySelector('.pinfo-x').addEventListener('click', e=>{ e.stopPropagation(); w.classList.remove('open'); b.setAttribute('aria-expanded', false); b.focus(); });
   document.addEventListener('keydown', e=>{ if (e.key==='Escape'){ w.classList.remove('open'); b.setAttribute('aria-expanded', false); } }); })();
 mountSliders('sim-env-sliders','sim', ['alt','Tamb','o2']);
 mountSliders('kin-env-sliders','kin', ['alt','Tamb','o2']);
