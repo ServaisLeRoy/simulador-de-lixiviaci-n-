@@ -882,7 +882,8 @@ function tauFor(route, P, targetPct){                    // horas de residencia 
 // E = {price, source:'compra'|'propia', pay, mineCost, capexMine, elec, heatSource, diesel, pNaCN, pTu, rate, life,
 //      build (meses de construcción), wcMonths, disc (descuento comercial), grind y tail (US$/t), tuCap (recuperación industrial de la tiourea)}
 const RAMP = { feed:0.5, collect:0.5, R:0.75 };   // mes de arranque: 50 % de capacidad, recuperación fija del 75 % y se cobra el 50 % del oro producido
-const REPL = { every:36, frac:0.15 };              // reposición de equipos: 15 % del CAPEX de planta cada 3 años (vidas > 3 años)
+const REPL = { every:36, frac:0.15 };              // reposición de equipos: 15 % del CAPEX de planta y mina cada 3 años (vidas > 3 años)
+const CLOSURE = 0.06;                               // cierre y abandono ambiental: 6 % del CAPEX total (planta + mina) en el último mes
 function recoveryFor(route, s, E){ return route==='tu' && E.tuCap!=null ? Math.min(s.R, E.tuCap) : s.R; }
 // costos y producción de un año a una capacidad dada (base para los meses)
 function annualBlock(route, P, s, E){
@@ -922,7 +923,7 @@ function economics(route, P, s, E){
   const capexPlant = PLANT_REF*Math.pow(P.feed/PLANT_REF_TPD, 0.6);
   const capexMine = own ? E.capexMine : 0;
   const capex = capexCircuit + capexPlant + capexMine;
-  const wc = (E.wcMonths||0)*A.opex/12;                               // compra de mineral + OPEX operativo, a plena capacidad
+  const wc = (E.wcMonths||0)*(A.opex + A.royalty)/12;                // mineral + OPEX + regalías (mina propia), a plena capacidad
   const invest = capex + wc;
   // mes de arranque: mitad del mineral, recuperación fija (no se premia el mayor tiempo de residencia)
   // reactivos, mineral, desechos, molienda y relaves: costo por tonelada a plena capacidad × toneladas del mes
@@ -940,7 +941,8 @@ function economics(route, P, s, E){
   const full = { tons:A.tyr/12, oz:A.oz/12, revenue:A.revenue/12, cost:(A.opex + A.royalty)/12, gmf:A.gmf/12, reagents:A.reagents/12 };
   // flujo mensual: los arreglos se crean de cero en cada cálculo
   const life = Math.max(1, Math.round(Number(E.life)||1)), build = Math.max(0, Math.round(Number(E.build)||0)), nOp = life*12, nMonths = build + nOp;
-  const capexRepl = capexCircuit + capexPlant;                       // base de la reposición: planta (sin mina ni capital de trabajo)
+  const capexRepl = capexCircuit + capexPlant + capexMine;            // base de la reposición: planta + mina (sin capital de trabajo)
+  const closure = CLOSURE*capex;                                      // cierre y abandono: planta + mina
   const repl = REPL.frac*capexRepl;
   // depreciación: 10 % anual de cada activo hasta el 100 % de su valor (la inversión inicial deja de depreciarse en el año 11)
   const assets = [{start:1, value:capex, left:capex}];
@@ -958,24 +960,25 @@ function economics(route, P, s, E){
       if (life > 3 && op % REPL.every === 0 && op < nOp){ replM = repl; replTotal += repl; assets.push({start:op+1, value:repl, left:repl}); stage = 'Reposición'; }
     }
     depTotal += dep;
-    let extra = 0, release = 0;
-    if (k === nMonths){ release = wc; extra = ramp.inventory; }          // al cierre: se recupera el capital de trabajo y el inventario en proceso
+    let extra = 0, release = 0, closeM = 0;
+    if (k === nMonths){ release = wc; extra = ramp.inventory; closeM = closure; }          // al cierre: se recupera el capital de trabajo y el inventario en proceso
     rev += extra;
-    ytd += rev - cost - dep + (1-LAW.gmfDeductible)*gmf;
+    ytd += rev - cost - closeM - dep + (1-LAW.gmfDeductible)*gmf;     // el cierre es gasto deducible del último año
     let tax = 0;
     if (k % 12 === 0 || k === nMonths){ const base = ytd - carry; if (base > 0){ tax = base*LAW.tax; carry = 0; } else carry = -base; ytd = 0; }
-    const flow = rev - cost - capexM - replM - tax + release;
+    const flow = rev - cost - capexM - replM - closeM - tax + release;
     const prev = cum, dprev = dcum, df = flow/Math.pow(1+rm, k);
     cum += flow; dcum += df;
     if (pay===null && prev<0 && cum>=0) pay = k-1 + (-prev)/flow;
     if (dpay===null && dprev<0 && dcum>=0) dpay = k-1 + (-dprev)/df;
-    months.push({ k, op, stage, tons, oz, rev, cost, capex:capexM, repl:replM, dep, tax, flow, cum });
+    if (closeM) stage = 'Cierre';
+    months.push({ k, op, stage, tons, oz, rev, cost, capex:capexM, repl:replM, close:closeM, dep, tax, flow, cum });
   }
   const flows = months.map(x=>x.flow);
   const npv = flows.reduce((a,f,i)=> a + f/Math.pow(1+rm, i+1), 0);
   const irrM = irrOf([0, ...flows]);
   const taxYear = months.find(x=>x.tax>0 && x.k>12+build) || months.find(x=>x.tax>0) || {tax:0};
-  return { ...A, capexCircuit, capexPlant, capexMine, capex, wc, invest, ramp, full, build, life, nMonths, repl, replTotal, depTotal,
+  return { ...A, capexCircuit, capexPlant, capexMine, capex, wc, invest, ramp, full, build, life, nMonths, repl, replTotal, depTotal, closure,
     fullMonthPreTax: full.revenue - full.cost, taxYear: taxYear.tax,
     months, flows, npv, irr: irrM===null ? null : Math.pow(1+irrM, 12)-1, pay, dpay, payMonth: pay===null ? null : Math.ceil(pay),
     ebitda: A.revenue - A.royalty - A.opex, costOz: A.oz>0 ? (A.opex + A.royalty)/A.oz : NaN, margin: A.revenue>0 ? (A.revenue - A.royalty - A.opex)/A.revenue : NaN };
@@ -1011,7 +1014,7 @@ const DEF = {
   cn:{ pH:10.75, C:1.0, dT:0, N:5, D:2.5, H:2.75 },
   tu:{ C:6, dT:0, N:5, D:1.75, H:1.95 },
   tkRoute:'cn',
-  eco:{ price:4100, source:'compra', pay:50, mineCost:42, capexMine:0, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10, build:6, wcMonths:1.5, disc:3, grind:5, tail:8, tuCap:85 }
+  eco:{ price:4100, source:'compra', pay:50, mineCost:105, capexMine:850000, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10, build:6, wcMonths:1.5, disc:3, grind:5, tail:8, tuCap:85 }
 };
 const ZONES = [
   {id:'vetas', n:'Vetas', alt:3350, T:11, x:470, d:'Es el municipio más alto del distrito; cerca de tres cuartas partes de su territorio están en el páramo de Santurbán. Hay minería subterránea pequeña en sus vetas.', src:'Altitud: cabecera municipal (3.350 m). Temperatura media: 11 °C (Climate-Data.org); otras fuentes reportan 5–6 °C en las partes altas del páramo.'},
@@ -1581,8 +1584,8 @@ function renderTanks(){
 const ECO_SPEC = {
   price:{lab:'Precio del oro', u:'US$/oz', s:'Precio internacional de referencia, noviembre de 2026'},
   pay:{lab:'Pago al minero por el oro del mineral', u:'% del oro contenido', s:'Lo que la planta paga por el oro que trae el mineral (lo recupere o no). En Segovia, Aris Mining obtuvo márgenes de 35–46 % sobre el oro comprado a mineros (2025–2026). La regalía la liquida el minero.', only:'compra'},
-  mineCost:{lab:'Costo de extracción en la mina', u:'US$/t', s:'Soto Norte (estudio de 2025): 42 US$/t en una mina subterránea grande. Una mina pequeña suele costar más: ajústalo si lo conoces.', only:'propia'},
-  capexMine:{lab:'Inversión en la mina', u:'US$', s:'Desarrollo, equipos y permisos. No hay dato verificable para minas pequeñas de la zona: escríbelo si lo conoces.', only:'propia'},
+  mineCost:{lab:'Costo de extracción en la mina', u:'US$/t', s:'Pequeña minería subterránea de veta angosta, perforación neumática y sostenimiento (valor indicado por el usuario; sin fuente publicada). Como comparación, Soto Norte (gran minería, 2025): 42 US$/t.', only:'propia'},
+  capexMine:{lab:'Inversión en la mina', u:'US$', s:'Bocaminas, frentes, ventilación, malacate y equipos de mina (valor indicado por el usuario; sin fuente publicada). Se deprecia, se repone el 15 % cada 3 años y entra en el cierre.', only:'propia'},
   elec:{lab:'Energía eléctrica', u:'US$/MWh', s:'ESSA, tarifa comercial e industrial de enero de 2026: COP 846,47/kWh, a TRM 3.297 (12 nov 2026). Agitación, bombeo y molienda'},
   diesel:{lab:'Precio del ACPM', u:'US$/galón', s:'Bucaramanga, noviembre de 2026: COP 11.364/galón, a TRM 3.297', only:'acpm', by:'heatSource'},
   pNaCN:{lab:'Precio del NaCN', u:'US$/t', s:''},
@@ -1615,6 +1618,8 @@ function mountEco(){
   syncEco();
 }
 function syncEco(){ document.querySelectorAll('#eco-inputs .inp[data-k]').forEach(el=>{ const o = ECO_SPEC[el.dataset.k]; el.hidden = !!o.only && o.only!==S.eco[o.by||'source']; }); }
+// TIR sin solución o menor a −50 %: el proyecto no es viable
+function irrTxt(x, d){ return (x===null || !isFinite(x) || x < -0.5) ? 'No viable (TIR < 0 %)' : f(x*100,d)+' %'; }
 function renderEco(){
   const E = ecoParams(), R = {};
   for (const route of ['cn','tu']){ const P = params(route), s = simulate(route,P); R[route] = {P, s, e: economics(route, P, s, E)}; }
@@ -1624,7 +1629,7 @@ function renderEco(){
     <div class="krow"><span><span class="dot" style="background:${COL.tu}"></span>Tiourea</span><b>${fm(vb)}</b></div>${hint?`<div class="small" style="margin-top:8px">${hint}</div>`:''}</div>`;
   document.getElementById('eco-kpis').innerHTML =
     kp('Valor actual neto (VAN)', a.npv, b.npv, kmoney, `Flujo mensual traído a hoy al ${f(E.rate*100,0)} % anual: ${E.build} meses de construcción y ${E.life} años de operación`) +
-    kp('Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,0)+' %', 'Rentable si supera la tasa de descuento') +
+    kp('Tasa interna de retorno (TIR)', a.irr, b.irr, x=> irrTxt(x,0), 'Rentable si supera la tasa de descuento') +
     kp('Payback real', a.payMonth, b.payMonth, x=> x===null ? 'No se recupera' : 'Mes '+x, `Mes en que el flujo acumulado pasa a positivo, contando ${E.build} meses de construcción. Descontado al ${f(E.rate*100,0)} %: ${a.dpay===null?'no se recupera':'mes '+Math.ceil(a.dpay)} y ${b.dpay===null?'no se recupera':'mes '+Math.ceil(b.dpay)}`);
   // calentamiento
   const z = zoneOf(S.zone);
@@ -1650,9 +1655,10 @@ function renderEco(){
     ['Circuito de lixiviación (tanques elegidos)', a.capexCircuit, b.capexCircuit, money],
     ['Resto de la planta de beneficio (referencia DNP)', a.capexPlant, b.capexPlant, money],
     ...(own ? [['Inversión en la mina', a.capexMine, b.capexMine, money]] : []),
-    [`Capital de trabajo (${f(E.wcMonths,1)} meses de costos)`, a.wc, b.wc, money],
+    [`Capital de trabajo (${f(E.wcMonths,1)} meses de costos${own?' con regalías':''})`, a.wc, b.wc, money],
     [`Inversión total (en ${E.build} cuotas mensuales)`, a.invest, b.invest, money, true],
-    [`Reposición de equipos: 15 % de la planta cada 3 años (${a.replTotal>0 ? Math.round(a.replTotal/a.repl)+' veces' : 'no aplica'})`, a.replTotal, b.replTotal, money],
+    [`Reposición de equipos: 15 % de ${own?'planta y mina':'la planta'} cada 3 años (${a.replTotal>0 ? Math.round(a.replTotal/a.repl)+' veces' : 'no aplica'})`, a.replTotal, b.replTotal, money],
+    [`Cierre y abandono ambiental: 6 % de ${own?'planta y mina':'la planta'} (último mes)`, a.closure, b.closure, money],
     sec(`3. Mes de arranque (mes ${E.build+1}, 50 % de capacidad)`),
     ['Mineral procesado', a.ramp.tons, b.ramp.tons, x=>f(x,1)+' t'],
     ['Recuperación fija del arranque', a.ramp.R*100, b.ramp.R*100, x=>f(x,1)+' %'],
@@ -1678,7 +1684,7 @@ function renderEco(){
     ['Margen sobre ingresos', a.margin*100, b.margin*100, x=>f(x,1)+' %'],
     ['Costo por onza producida', a.costOz, b.costOz, x=>'US$ '+f(x,0)+'/oz'],
     ['Valor actual neto (VAN)', a.npv, b.npv, money, true],
-    ['Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,1)+' %'],
+    ['Tasa interna de retorno (TIR)', a.irr, b.irr, x=> irrTxt(x,1)],
     ['Payback real', a.payMonth, b.payMonth, x=> x===null?'No se recupera':'Mes '+x, true],
     ['Payback descontado', a.dpay, b.dpay, x=> x===null?'No se recupera':'Mes '+Math.ceil(x)]
   ];
@@ -1693,7 +1699,7 @@ function renderEco(){
     const k = e.payMonth, prev = e.months[k-2] ? e.months[k-2].cum : 0;
     return `${lab}: al final del mes ${k-1} el acumulado es ${money(prev)}; el mes ${k} deja ${money(e.months[k-1].flow)} → <b>payback en el mes ${k}</b> (${f(e.pay,2)} meses).`; };
   document.getElementById('eco-pay').innerHTML = `<h3>Flujo de caja mes a mes</h3>
-    <p class="small" style="margin:6px 0 10px">Meses 1 a ${E.build}: construcción (inversión y capital de trabajo en cuotas iguales, sin producción). Mes ${E.build+1}: arranque al 50 % de capacidad con recuperación fija del 75 %, se cobra la mitad del oro. Desde el mes ${E.build+2}: plena capacidad. ${E.life>3?'Cada 36 meses de operación se repone el 15 % de la planta (etapa «Reposición»). ':''}El impuesto de renta se paga una vez al año (meses 12, 24, 36…). Se muestran los ${NM} meses del proyecto; en negrita, el mes del payback.</p>
+    <p class="small" style="margin:6px 0 10px">Meses 1 a ${E.build}: construcción (inversión y capital de trabajo en cuotas iguales, sin producción). Mes ${E.build+1}: arranque al 50 % de capacidad con recuperación fija del 75 %, se cobra la mitad del oro. Desde el mes ${E.build+2}: plena capacidad. ${E.life>3?`Cada 36 meses de operación se repone el 15 % de ${own?'la planta y la mina':'la planta'} (etapa «Reposición»). `:''}El impuesto de renta se paga una vez al año (meses 12, 24, 36…). En el último mes se paga el cierre y abandono ambiental (6 % de la inversión en activos). Se muestran los ${NM} meses del proyecto; en negrita, el mes del payback.</p>
     <div class="tbl-wrap" style="background:none;max-height:420px;overflow:auto"><table><thead><tr><th>Mes</th><th>Etapa</th><th class="r">Cianuración</th><th class="r">Acum.</th><th class="r">Tiourea</th><th class="r">Acum.</th></tr></thead><tbody>${Array.from({length:NM},(_,k)=>mrow(k)).join('')}</tbody></table></div>
     <p class="small" style="margin:10px 0 0">${why('Cianuración', a)}<br>${why('Tiourea', b)}</p>`;
   const cc = CH['ch-eco-cum'];
@@ -1711,7 +1717,7 @@ function renderEco(){
   cp.data.datasets.push({label:'Precio actual · punto', data:[{x:E.price,y:a.npv/1e6},{x:E.price,y:b.npv/1e6}], borderColor:COL.ink, backgroundColor:'#fff', pointRadius:6, showLine:false});
   cp.data.datasets.push({label:'cero · línea', data:[{x:1500,y:0},{x:6000,y:0}], borderColor:COL.ink, borderWidth:1, borderDash:[4,4]});
   cp.options.scales.x.min = 1500; cp.options.scales.x.max = 6000; cp.update();
-  document.getElementById('eco-note').innerHTML = `Flujo de caja mensual durante ${E.build} meses de construcción y ${E.life} años de operación. Arranque con la mitad del mineral, recuperación fija del 75 % y costos por tonelada iguales a los de plena capacidad (la energía de agitación y las pérdidas de calor de los tanques no bajan). Reposición de equipos: 15 % del CAPEX de planta (circuito + resto de la planta, sin mina ni capital de trabajo) cada 36 meses de operación cuando la vida útil supera 3 años, sin reponer en el último mes; se deprecia al 10 % anual como la inversión inicial, y ningún activo se deprecia más del 100 % de su valor (la inversión inicial deja de depreciarse en el año 11). Al cierre se recuperan el capital de trabajo y el oro que quedó en proceso en el arranque. VAN con la tasa anual convertida a mensual; TIR anualizada. Inversión: circuito de lixiviación con los costos de la Tabla 8 del documento de referencia y el resto de la planta con la planta comunitaria tipo del DNP (hasta 40 t/d, COP 2.714 millones de 2021), ambos escalados con la regla de los seis décimos. ${own ? 'Mina propia: la regalía la paga la planta y el costo de la mina se cobra por tonelada.' : 'Compra de mineral: la planta paga al minero un porcentaje del oro que trae el mineral; la regalía la liquida el minero.'} Ley colombiana incluida: impuesto de renta del 35 % (art. 240 ET), depreciación del 10 % anual (art. 137 ET), regalía del 4 % sobre el 80 % del precio internacional (Ley 141 de 1994; Ley 756 de 2002), deducible en renta (C-489 de 2023), y 4×1000 con 50 % deducible (art. 115 ET). La explotación minera no paga impuestos municipales (art. 231 del Código de Minas).`;
+  document.getElementById('eco-note').innerHTML = `Flujo de caja mensual durante ${E.build} meses de construcción y ${E.life} años de operación. Arranque con la mitad del mineral, recuperación fija del 75 % y costos por tonelada iguales a los de plena capacidad (la energía de agitación y las pérdidas de calor de los tanques no bajan). Reposición de equipos: 15 % del CAPEX de activos (circuito + resto de la planta + mina, sin capital de trabajo) cada 36 meses de operación cuando la vida útil supera 3 años, sin reponer en el último mes; se deprecia al 10 % anual como la inversión inicial, y ningún activo se deprecia más del 100 % de su valor (la inversión inicial deja de depreciarse en el año 11). Cierre y abandono ambiental: 6 % del CAPEX de activos en el último mes, deducible en renta. Con mina propia el capital de trabajo incluye las regalías. Al cierre se recuperan el capital de trabajo y el oro que quedó en proceso en el arranque. VAN con la tasa anual convertida a mensual; TIR anualizada. Inversión: circuito de lixiviación con los costos de la Tabla 8 del documento de referencia y el resto de la planta con la planta comunitaria tipo del DNP (hasta 40 t/d, COP 2.714 millones de 2021), ambos escalados con la regla de los seis décimos. ${own ? 'Mina propia: la regalía la paga la planta y el costo de la mina se cobra por tonelada.' : 'Compra de mineral: la planta paga al minero un porcentaje del oro que trae el mineral; la regalía la liquida el minero.'} Ley colombiana incluida: impuesto de renta del 35 % (art. 240 ET), depreciación del 10 % anual (art. 137 ET), regalía del 4 % sobre el 80 % del precio internacional (Ley 141 de 1994; Ley 756 de 2002), deducible en renta (C-489 de 2023), y 4×1000 con 50 % deducible (art. 115 ET). La explotación minera no paga impuestos municipales (art. 231 del Código de Minas).`;
 }
 
 // ---------- zonas mineras y montaña ----------
@@ -1813,8 +1819,8 @@ function renderSources(){
       'Calor para la pulpa que entra (c<sub>p</sub> 0,8 y 4,186 kJ/kg·°C) más las pérdidas de los tanques abiertos: q<sub>sup</sub> y q<sub>pared</sub> según las tablas de Engineering ToolBox para superficie de agua y acero sin aislar en aire quieto, y el vapor que arrastra el aire de la cianuración. Electricidad al 100 % o caldera de ACPM al 80 % (35,8 MJ/L).'],
     ['Inversión', String.raw`\[ I=C_{circuito}\left(\frac{V}{V_{ref}}\right)^{0{,}6}+C_{DNP}\left(\frac{\text{t/d}}{40}\right)^{0{,}6}\;(+\ \text{mina}) \]`,
       'Circuito: Tabla 8 del documento × 1,78 (costo directo) × 1,12 (ingeniería) × 1,30 (contingencia); 1,5 veces en tiourea por materiales resistentes al ácido. C<sub>DNP</sub> = COP 2.714 millones de 2021 a TRM 3.743.'],
-    ['Flujo de caja mensual', String.raw`\[ FC_m=\text{Ingreso}_m-\text{Costos}_m-\text{Inversión}_m-\text{Renta}_{m=12,24,\dots},\quad \mathrm{VAN}=\sum_{m}\frac{FC_m}{(1+i)^{m/12}} \]`,
-      'Construcción: inversión y capital de trabajo (1,5 meses de costos) en cuotas, sin producción. Arranque: 50 % de capacidad, se cobra el 50 % del oro. Ingreso = onzas × precio × (1 − 3 % de descuento comercial). Costos: mineral, reactivos, energía, calentamiento, residuos, US$ 5/t de medios de molienda, US$ 8/t de relaves y carbón, personal y 4×1000. Renta del 35 % pagada una vez al año. Payback real: mes en que el acumulado pasa a positivo.']
+    ['Flujo de caja mensual', String.raw`\[ FC_m=\text{Ingreso}_m-\text{Costos}_m-\text{Inversión}_m-\text{Reposición}_m-\text{Cierre}_m-\text{Renta}_{m=12,24,\dots},\quad \mathrm{VAN}=\sum_{m}\frac{FC_m}{(1+i)^{m/12}} \]`,
+      'Construcción: inversión y capital de trabajo (1,5 meses de costos) en cuotas, sin producción. Arranque: 50 % de capacidad con recuperación fija del 75 %, se cobra el 50 % del oro. Ingreso = onzas × precio × (1 − 3 % de descuento comercial). Costos: mineral, reactivos, energía, calentamiento, residuos, US$ 5/t de medios de molienda, US$ 8/t de relaves y carbón, personal y 4×1000. Con mina propia se suman la extracción por tonelada, la regalía del 4 % sobre el 80 % del precio y la inversión en la mina. Reposición: 15 % de los activos cada 36 meses de operación (vida > 3 años). Cierre y abandono: 6 % de los activos en el último mes. Renta del 35 % pagada una vez al año. Payback real: mes en que el acumulado pasa a positivo.']
   ];
   document.getElementById('eq-just').innerHTML = EQ.map(([t,e,j])=>`<div class="card"><h3>${t}</h3><div class="eqn">${e}</div><p class="small">${j}</p></div>`).join('');
   if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
