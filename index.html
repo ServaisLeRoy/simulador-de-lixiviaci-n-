@@ -304,6 +304,27 @@ body.modal-open{overflow:hidden}
 .studies .card h3 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1F1F1D;color:#F7F7F5;font-size:14px;margin-right:8px;vertical-align:2px}
 
 .tkg{cursor:pointer}.tkg:focus{outline:none}.tkg:hover path,.tkg:focus-visible path{stroke:#8A5A12;stroke-width:3}
+.pinfo{position:relative;display:inline-block;vertical-align:middle;margin-left:14px}
+.pinfo-btn{position:relative;z-index:31;width:30px;height:30px;border-radius:50%;border:1.5px solid #6E6D68;background:transparent;color:#6E6D68;font:600 16px/1 'Instrument Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.pinfo-btn:hover,.pinfo.open .pinfo-btn{border-color:#1F1F1D;color:#1F1F1D}
+.pinfo-btn:focus-visible{outline:2px solid #0072B2;outline-offset:2px}
+.pinfo-pop{display:none;position:absolute;left:0;top:calc(100% + 10px);text-wrap:wrap;white-space:normal;z-index:30;width:min(460px,86vw);background:#FFFFFF;color:#1F1F1D;border:1px solid #D7D6D1;border-radius:12px;padding:18px 20px;font:400 14.5px/1.6 Manrope,sans-serif;letter-spacing:0;text-transform:none;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.pinfo.open .pinfo-pop{display:block}
+.pinfo-pop *{text-wrap:wrap}
+.pinfo-pop b{display:block;padding-right:28px;font:600 15.5px/1.4 'Instrument Sans',sans-serif;margin-bottom:12px}
+.pinfo-pop .k{display:block;color:#6E6D68;font-size:13.5px;margin:14px 0 6px}
+.pinfo-pop ul{margin:0;padding-left:18px}.pinfo-pop li{margin:0 0 8px}
+.pinfo-x{position:absolute;top:10px;right:12px;border:0;background:none;font:400 22px/1 Manrope,sans-serif;color:#6E6D68;cursor:pointer;padding:4px}
+.pinfo-x:hover{color:#1F1F1D}
+.pinfo-pop .nt{display:block;color:#6E6D68;font-size:13.5px;margin-top:14px;padding-top:12px;border-top:1px solid #E6E5E0}
+@media (max-width:640px){.pinfo{position:static}.pinfo-pop{position:fixed;left:12px;right:12px;top:84px;width:auto;max-height:72vh;overflow:auto;z-index:40}}
+.eco-tanks{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;margin-top:18px;padding:12px 16px;border:1px solid #E6E5E0;border-radius:12px;font-size:14px}
+.eco-tanks .t{color:#6E6D68}
+.eco-tanks .stp{display:inline-flex;align-items:center;gap:8px}
+.eco-tanks .stp button{width:28px;height:28px;border-radius:50%;border:1px solid #D7D6D1;background:transparent;color:#1F1F1D;font:500 16px/1 Manrope,sans-serif;cursor:pointer}
+.eco-tanks .stp button:hover:not(:disabled){border-color:#1F1F1D}
+.eco-tanks .stp button:disabled{opacity:.35;cursor:default}
+.eco-tanks .stp b{min-width:18px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
 .tk-tip{position:absolute;z-index:5;width:290px;background:#1F1F1D;color:#F7F7F5;border-radius:14px;padding:12px 14px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none}
 .tk-tip b{font-family:'Instrument Sans',sans-serif;font-size:16px}
 .tk-tip div{display:flex;justify-content:space-between;gap:10px;margin-top:5px;border-top:1px solid rgba(255,255,255,.12);padding-top:5px}
@@ -628,7 +649,7 @@ ol.refs li{margin:0 0 10px}
 
 <section class="tab" id="tab-economia">
 <div class="intro"><div>  
-  <h1 class="hero">Evaluación económica</h1>
+  <h1 class="hero">Evaluación económica<span class="pinfo" id="pinfo"><button type="button" class="pinfo-btn" aria-label="Información sobre los precios de los reactivos" aria-expanded="false" aria-controls="pinfo-pop">i</button><span class="pinfo-pop" id="pinfo-pop" role="dialog" aria-label="Precios de los reactivos"><button type="button" class="pinfo-x" aria-label="Cerrar">×</button><b>Precios de reactivos ajustados el 13 de noviembre de 2026</b><span class="k">Puesto en planta, US$/t, sin IVA (descontable)</span><ul><li>NaCN: 2.475 = CIF 2.310 (Brasil, nov-2025) + arancel 5 % (116) + tasa portuaria Buenaventura (1) + flete terrestre promedio (48)</li><li>Tiourea: 2.255 = CIF 2.100 (Buenaventura, rango 1.800–2.400, 2026) + arancel 5 % (105) + tasa portuaria (1) + flete terrestre promedio (48)</li><li>Antes: NaCN 2.500 y tiourea 2.100. Cal 250 y metabisulfito 700 se ajustaron antes y no cambian</li></ul><span class="k">Implicaciones en Economía (caso base, 10 años)</span><ul><li>Cianuración: el NaCN baja 1 %; el VAN queda en US$ 6,21 M (sin cambio apreciable) y el payback en el mes 17</li><li>Tiourea: sube 7 %; el costo de operación aumenta y el VAN baja de US$ 6,30 M a 6,20 M. El payback sigue en el mes 17</li><li>Con mina propia: 14,92 M y 14,87 M (antes 14,92 y 14,97)</li><li>Las dos rutas quedan prácticamente empatadas en VAN con estos precios</li></ul><span class="nt">Flete con la tarifa nacional promedio de 2025 (158.275 COP/t, TRM 3.297, la misma del resto del simulador), no la ruta exacta al distrito. No incluidos por falta de fuente: agencia de aduanas, almacenaje, margen del distribuidor y manejo del NaCN como sustancia controlada. El arancel de la tiourea (5 %) depende de su subpartida exacta (2930.90). Edita los precios a la izquierda si tienes una cotización.</span></span></span></h1>
 </div><div>  <p class="lede">Estima si cada ruta gana dinero con el oro que recupera en la simulación. Ajusta el precio del oro, el origen del mineral y los costos a la izquierda. La recuperación, los tanques y el consumo de reactivo vienen de la pestaña Simulación.</p></div></div>
 
   <div class="split" style="margin-top:30px">
@@ -639,6 +660,10 @@ ol.refs li{margin:0 0 10px}
     </aside>
     <div class="main-col">
       <div class="grid g3" id="eco-kpis"></div>
+      <div class="eco-tanks" id="eco-tanks"><span class="t">Tanques en serie</span>
+        <span class="stp">Cianuración <button type="button" data-r="cn" data-d="-1" aria-label="Quitar un tanque de cianuración">−</button><b id="eco-n-cn">5</b><button type="button" data-r="cn" data-d="1" aria-label="Agregar un tanque de cianuración">+</button></span>
+        <span class="stp">Tiourea <button type="button" data-r="tu" data-d="-1" aria-label="Quitar un tanque de tiourea">−</button><b id="eco-n-tu">5</b><button type="button" data-r="tu" data-d="1" aria-label="Agregar un tanque de tiourea">+</button></span>
+        <span class="t">Mismo número que en Simulación</span></div>
       <div class="card" style="margin-top:18px">
         <h3>Costo de calentar la pulpa</h3>
         <p class="small" style="margin:6px 0 0">Elige la zona y cuántos grados subir la pulpa sobre la temperatura ambiente. Son los mismos controles de Simulación y Cinética: calentar cambia la recuperación y además suma un costo diario de energía.</p>
@@ -1022,7 +1047,7 @@ const DEF = {
   cn:{ pH:10.75, C:1.0, dT:0, N:5, D:2.5, H:2.75 },
   tu:{ C:6, dT:0, N:5, D:1.75, H:1.95 },
   tkRoute:'cn',
-  eco:{ price:4100, source:'compra', pay:50, mineCost:105, capexMine:850000, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10, build:6, wcMonths:1.5, disc:3, grind:5, tail:8, tuRinfP:94, tuRinfC:88 }
+  eco:{ price:4100, source:'compra', pay:50, mineCost:105, capexMine:850000, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2475, pTu:2255, rate:10, life:10, build:6, wcMonths:1.5, disc:3, grind:5, tail:8, tuRinfP:94, tuRinfC:88 }
 };
 const ZONES = [
   {id:'vetas', n:'Vetas', alt:3350, T:11, x:470, d:'Es el municipio más alto del distrito; cerca de tres cuartas partes de su territorio están en el páramo de Santurbán. Hay minería subterránea pequeña en sus vetas.', src:'Altitud: cabecera municipal (3.350 m). Temperatura media: 11 °C (Climate-Data.org); otras fuentes reportan 5–6 °C en las partes altas del páramo.'},
@@ -1608,8 +1633,8 @@ const ECO_SPEC = {
   capexMine:{lab:'Inversión en la mina', u:'US$', s:'Bocaminas, frentes, ventilación, malacate y equipos de mina (valor indicado por el usuario; sin fuente publicada). Se deprecia, se repone el 15 % cada 3 años y entra en el cierre.', only:'propia'},
   elec:{lab:'Energía eléctrica', u:'US$/MWh', s:'ESSA, tarifa comercial e industrial de enero de 2026: COP 846,47/kWh, a TRM 3.297 (12 nov 2026). Agitación, bombeo y molienda'},
   diesel:{lab:'Precio del ACPM', u:'US$/galón', s:'Bucaramanga, noviembre de 2026: COP 11.364/galón, a TRM 3.297', only:'acpm', by:'heatSource'},
-  pNaCN:{lab:'Precio del NaCN', u:'US$/t', s:''},
-  pTu:{lab:'Precio de la tiourea', u:'US$/t', s:''},
+  pNaCN:{lab:'Precio del NaCN', u:'US$/t', s:'Puesto en planta, sin IVA (nov-2026). Detalle en el botón i'},
+  pTu:{lab:'Precio de la tiourea', u:'US$/t', s:'Puesto en planta, sin IVA (nov-2026). Detalle en el botón i'},
   rate:{lab:'Tasa de descuento', u:'%', s:'Solo cambia el VAN y la recuperación descontada'},
   life:{lab:'Vida útil del proyecto', u:'años', s:'Años de operación, después de la construcción (1 a 30)'},
   build:{lab:'Construcción', u:'meses', s:'La inversión se paga en cuotas iguales y no hay producción. El mes siguiente es el arranque: 50 % de capacidad y se cobra el 50 % del oro (el resto queda en proceso hasta el cierre)'},
@@ -1636,6 +1661,9 @@ function mountEco(){
   document.getElementById('e-heatSource').addEventListener('change', e=>{ S.eco.heatSource = e.target.value; syncEco(); schedule(); });
   Object.keys(ECO_SPEC).forEach(k=> document.getElementById('e-'+k).addEventListener('input', e=>{ const v = (k==='life'||k==='build') ? parseInt(e.target.value, 10) : Number(e.target.value); if (e.target.value!=='' && Number.isFinite(v) && v>=0){ S.eco[k]=v; schedule(); } }));
   document.getElementById('eco-reset').addEventListener('click', ()=>{ S.eco = JSON.parse(JSON.stringify(DEF.eco)); Object.keys(ECO_SPEC).forEach(k=> document.getElementById('e-'+k).value = S.eco[k]); document.getElementById('e-source').value = S.eco.source; document.getElementById('e-heatSource').value = S.eco.heatSource; syncEco(); schedule(); });
+  document.querySelectorAll('#eco-tanks .stp button').forEach(b=> b.addEventListener('click', ()=>{
+    const k = b.dataset.r+'.N', sp = SPEC[k], v = Math.max(sp.min, Math.min(sp.max, S[b.dataset.r].N + Number(b.dataset.d)));
+    if (v!==S[b.dataset.r].N){ S[b.dataset.r].N = v; syncAll(); schedule(); } }));
   syncEco();
 }
 function syncEco(){ document.querySelectorAll('#eco-inputs .inp[data-k]').forEach(el=>{ const o = ECO_SPEC[el.dataset.k]; el.hidden = !!o.only && o.only!==S.eco[o.by||'source']; }); }
@@ -1645,6 +1673,8 @@ function renderEco(){
   const E = ecoParams(), R = {};
   for (const route of ['cn','tu']){ const P = params(route), s = simulate(route,P); R[route] = {P, s, e: economics(route, P, s, E)}; }
   const a = R.cn.e, b = R.tu.e, own = E.source==='propia';
+  for (const rt of ['cn','tu']){ const n = document.getElementById('eco-n-'+rt); if (n) n.textContent = S[rt].N;
+    document.querySelectorAll(`#eco-tanks .stp button[data-r="${rt}"]`).forEach(b=> b.disabled = (b.dataset.d<0 && S[rt].N<=SPEC[rt+'.N'].min) || (b.dataset.d>0 && S[rt].N>=SPEC[rt+'.N'].max)); }
   const kp = (lab, va, vb, fm, hint) => `<div class="card kcard"><div class="small">${lab}</div>
     <div class="krow"><span><span class="dot" style="background:${COL.cn}"></span>Cianuración</span><b>${fm(va)}</b></div>
     <div class="krow"><span><span class="dot" style="background:${COL.tu}"></span>Tiourea</span><b>${fm(vb)}</b></div>${hint?`<div class="small" style="margin-top:8px">${hint}</div>`:''}</div>`;
@@ -1858,6 +1888,11 @@ function render(){
   if (current==='economia') renderEco();
 }
 
+(function(){ const w = document.getElementById('pinfo'); if (!w) return; const b = w.querySelector('button');
+  b.addEventListener('click', e=>{ e.stopPropagation(); const o = w.classList.toggle('open'); b.setAttribute('aria-expanded', o); });
+  document.addEventListener('click', e=>{ if (!w.contains(e.target)){ w.classList.remove('open'); b.setAttribute('aria-expanded', false); } });
+  w.querySelector('.pinfo-x').addEventListener('click', e=>{ e.stopPropagation(); w.classList.remove('open'); b.setAttribute('aria-expanded', false); b.focus(); });
+  document.addEventListener('keydown', e=>{ if (e.key==='Escape'){ w.classList.remove('open'); b.setAttribute('aria-expanded', false); } }); })();
 // ===================== INICIO =====================
 mountSliders('sim-env-sliders','sim', ['alt','Tamb','o2']);
 mountSliders('kin-env-sliders','kin', ['alt','Tamb','o2']);
