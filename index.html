@@ -652,7 +652,7 @@ ol.refs li{margin:0 0 10px}
       <div class="tbl-wrap" style="margin-top:18px"><table id="eco-table"></table></div>
       <div class="grid g2" style="margin-top:18px">
         <div class="card" id="eco-pay"></div>
-        <div class="chart-card"><h4>Flujo de caja acumulado</h4><p class="small">Millones de US$. Empieza negativo por la inversión; donde cruza el cero, la inversión ya se recuperó.</p><div class="chart-box"><canvas id="ch-eco-cum"></canvas></div></div>
+        <div class="chart-card"><h4>Flujo de caja acumulado, mes a mes</h4><p class="small">Millones de US$, primeros 36 meses. Baja durante la construcción; donde cruza el cero está el payback real. Los escalones son los pagos anuales del impuesto de renta.</p><div class="chart-box"><canvas id="ch-eco-cum"></canvas></div></div>
       </div>
       <div class="chart-card" style="margin-top:18px"><h4>Rentabilidad según el precio del oro</h4><p class="small">Valor actual neto en millones de US$. Por encima de cero la ruta es rentable; por debajo, pierde dinero.</p><div class="chart-box" style="height:clamp(360px,26vw,460px)"><canvas id="ch-eco-price"></canvas></div></div>
       <p class="small" id="eco-note" style="margin-top:14px"></p>
@@ -879,61 +879,89 @@ function tauFor(route, P, targetPct){                    // horas de residencia 
 }
 
 // ---------- economía ----------
-// E = {price, source:'compra'|'propia', pay, mineCost, capexMine, elec (US$/MWh), heatSource:'elec'|'acpm', diesel (US$/gal), pNaCN, pTu, rate, life}
-function economics(route, P, s, E){
-  const tyr = P.feed*DAYS, ozFeed = tyr*P.ley/31.1035, oz = ozFeed*s.R;
-  const revenue = oz*E.price, own = E.source==='propia';
-  const ore = own ? E.mineCost*tyr : ozFeed*E.price*E.pay;           // costo del mineral
-  const royalty = own ? revenue*LAW.royaltyBase*LAW.royalty : 0;     // si se compra, la regalía la liquida el minero
-  // inversión: circuito de lixiviación (documento, Tabla 8) + resto de la planta (DNP), regla de los seis décimos
+// E = {price, source:'compra'|'propia', pay, mineCost, capexMine, elec, heatSource, diesel, pNaCN, pTu, rate, life,
+//      build (meses de construcción), wcMonths, disc (descuento comercial), grind y tail (US$/t), tuCap (recuperación industrial de la tiourea)}
+const RAMP = { feed:0.5, collect:0.5 };     // mes de arranque: 50 % de capacidad y se cobra el 50 % del oro producido
+function recoveryFor(route, s, E){ return route==='tu' && E.tuCap!=null ? Math.min(s.R, E.tuCap) : s.R; }
+// costos y producción de un año a una capacidad dada (base para los meses)
+function annualBlock(route, P, s, E){
+  const R = recoveryFor(route, s, E);
+  const tyr = P.feed*DAYS, ozFeed = tyr*P.ley/31.1035, oz = ozFeed*R;
+  const own = E.source==='propia';
+  const revenue = oz*E.price*(1-(E.disc||0));
+  const ore = own ? E.mineCost*tyr : ozFeed*E.price*E.pay;
+  const royalty = own ? oz*E.price*LAW.royaltyBase*LAW.royalty : 0;
   const fmat = route==='tu' ? 1.5 : 1;
   const sV = Math.pow(s.Vt/49.8, 0.6), sQ = Math.pow(s.Q/8, 0.6), sM = Math.pow(s.Ms/(80/24), 0.6);
   const eq = 199039/5*s.N*sV*fmat + 14353*sQ*fmat + (route==='cn' ? 5885 : 10150)*sM;
-  const capexCircuit = eq*1.78*1.12*1.30;
+  const kWleach = (2.2*(s.Q/8) + 7.5*s.N*(s.Vt/49.8) + 3*(s.Q/8) + (route==='cn' ? 2.2*(s.Ms/(80/24)) : 0))*31.24/44.9;
+  const energy = kWleach*24*DAYS/1000*E.elec + s.grindKWh*tyr/1000*E.elec;
+  const heat = s.heatKW*24*DAYS*heatCostPerKWh(E);
+  const cons = s.consOf(R, s.tau);
+  let reagents, waste;
+  if (route==='cn'){
+    reagents = cons*tyr*E.pNaCN/1000 + DOSES.lime/0.85*tyr*PRICES.lime/1000;
+    waste = P.C*s.LS*(1-FIXED.recycle)*64.07/49.01*1.5/0.674*tyr*PRICES.smbs/1000;
+  } else {
+    reagents = cons*tyr*E.pTu/1000 + DOSES.acid*tyr*PRICES.acid/1000 + DOSES.ferric*tyr*PRICES.ferric/1000;
+    waste = (Math.pow(10,-1.5)/2 + 1.5*0.5*P.C/76.12)*56.08*s.LS*(1-FIXED.recycle)/0.85*tyr*PRICES.lime/1000;
+  }
+  const grindMedia = (E.grind||0)*tyr, tailings = (E.tail||0)*tyr;
+  const staff = FIXED.personnel + FIXED.lab + FIXED.maint*eq;      // fijo: no baja en el arranque
+  const variable = ore + reagents + energy + heat + waste + grindMedia + tailings;
+  const gmf = LAW.gmf*(variable + staff + royalty);
+  return { R, tyr, ozFeed, oz, revenue, discount: oz*E.price*(E.disc||0), ore, royalty, eq, energy, heat, reagents, waste, grindMedia, tailings, staff, variable, gmf,
+           opex: variable + staff + gmf, plantOpex: reagents + energy + heat + waste + staff + grindMedia + tailings };
+}
+function economics(route, P, s, E){
+  const A = annualBlock(route, P, s, E);
+  const own = E.source==='propia';
+  // inversión
+  const capexCircuit = A.eq*1.78*1.12*1.30;
   const capexPlant = PLANT_REF*Math.pow(P.feed/PLANT_REF_TPD, 0.6);
   const capexMine = own ? E.capexMine : 0;
   const capex = capexCircuit + capexPlant + capexMine;
-  // energía
-  const kWleach = (2.2*(s.Q/8) + 7.5*s.N*(s.Vt/49.8) + 3*(s.Q/8) + (route==='cn' ? 2.2*(s.Ms/(80/24)) : 0))*31.24/44.9;
-  const energyLeach = kWleach*24*DAYS/1000*E.elec;
-  const energyGrind = s.grindKWh*tyr/1000*E.elec;
-  const heat = s.heatKW*24*DAYS*heatCostPerKWh(E);
-  // reactivos y residuos
-  let reagents, waste;
-  if (route==='cn'){
-    reagents = s.cons*tyr*E.pNaCN/1000 + DOSES.lime/0.85*tyr*PRICES.lime/1000;
-    const smbs = P.C*s.LS*(1-FIXED.recycle)*64.07/49.01*1.5/0.674;         // kg Na2S2O5/t para destruir el cianuro
-    waste = smbs*tyr*PRICES.smbs/1000;
-  } else {
-    reagents = s.cons*tyr*E.pTu/1000 + DOSES.acid*tyr*PRICES.acid/1000 + DOSES.ferric*tyr*PRICES.ferric/1000;
-    const cao = (Math.pow(10,-1.5)/2 + 1.5*0.5*P.C/76.12)*56.08*s.LS*(1-FIXED.recycle); // kg CaO/t (pH 1,5; Fe/Tu 0,5)
-    waste = cao/0.85*tyr*PRICES.lime/1000;
+  const wc = (E.wcMonths||0)*A.opex/12;                               // compra de mineral + OPEX operativo, a plena capacidad
+  const invest = capex + wc;
+  // mes de arranque: mismos tanques con la mitad del mineral (más tiempo de residencia)
+  const P7 = {...P, feed:P.feed*RAMP.feed}, s7 = simulate(route, P7), A7 = annualBlock(route, P7, s7, E);
+  const ramp = { R:A7.R, oz:A7.oz/12, revenue:A7.revenue/12*RAMP.collect, cost:(A7.variable + A.staff + A7.royalty)/12, inventory:A7.revenue/12*(1-RAMP.collect) };
+  ramp.gmf = LAW.gmf*ramp.cost; ramp.cost += ramp.gmf;
+  const full = { oz:A.oz/12, revenue:A.revenue/12, cost:(A.opex + A.royalty)/12, gmf:A.gmf/12 };
+  // flujo mensual durante toda la vida útil
+  const build = Math.max(0, Math.round(E.build||0)), nMonths = build + E.life*12;
+  const depM = capex*LAW.dep/12, depMonths = Math.round(12/LAW.dep);
+  const months = []; let cum = 0, dcum = 0, ytd = 0, carry = 0, pay = null, dpay = null;
+  const rm = Math.pow(1+E.rate, 1/12) - 1;
+  for (let k=1; k<=nMonths; k++){
+    const op = k - build;                                   // mes de operación (1 = arranque)
+    let stage, tons=0, oz=0, rev=0, cost=0, gmf=0, capexM=0, dep=0, royalty=0;
+    if (op <= 0){ stage='Construcción'; capexM = build ? invest/build : 0; }
+    else if (op === 1){ stage='Arranque'; tons=A7.tyr/12; oz=ramp.oz; rev=ramp.revenue; cost=ramp.cost; gmf=ramp.gmf; royalty=A7.royalty/12; }
+    else { stage='Operación'; tons=A.tyr/12; oz=full.oz; rev=full.revenue; cost=full.cost; gmf=full.gmf; royalty=A.royalty/12; }
+    if (build===0 && k===1) capexM = invest;
+    if (op >= 1 && op <= depMonths) dep = depM;
+    let extra = 0, release = 0;
+    if (k === nMonths){ release = wc; extra = ramp.inventory; }          // al cierre: se recupera el capital de trabajo y el inventario en proceso
+    rev += extra;
+    ytd += rev - cost - dep + (1-LAW.gmfDeductible)*gmf;
+    let tax = 0;
+    if (k % 12 === 0 || k === nMonths){ const base = ytd - carry; if (base > 0){ tax = base*LAW.tax; carry = 0; } else carry = -base; ytd = 0; }
+    const flow = rev - cost - capexM - tax + release;
+    const prev = cum, dprev = dcum, df = flow/Math.pow(1+rm, k);
+    cum += flow; dcum += df;
+    if (pay===null && prev<0 && cum>=0) pay = k-1 + (-prev)/flow;
+    if (dpay===null && dprev<0 && dcum>=0) dpay = k-1 + (-dprev)/df;
+    months.push({ k, stage, tons, oz, rev, cost, capex:capexM, tax, flow, cum });
   }
-  const staff = FIXED.personnel + FIXED.lab + FIXED.maint*eq;
-  const plantOpex = reagents + energyLeach + energyGrind + heat + waste + staff;
-  const gmf = LAW.gmf*(ore + royalty + plantOpex);
-  const opex = ore + plantOpex + gmf;
-  const ebitda = revenue - royalty - opex;
-  const years = [], flows = [-capex];
-  for (let y=1;y<=E.life;y++){
-    const dep = y <= 1/LAW.dep ? capex*LAW.dep : 0;
-    const taxable = ebitda - dep + (1-LAW.gmfDeductible)*gmf;
-    const tax = Math.max(0, taxable*LAW.tax);
-    years.push({y, dep, taxable, tax, cf: ebitda - tax}); flows.push(ebitda - tax);
-  }
-  const npv = flows.reduce((a,f,i)=> a + f/Math.pow(1+E.rate, i), 0);
-  let cum = flows[0], dcum = flows[0], pay = null, dpay = null; const cumA = [cum];
-  for (let y=1;y<flows.length;y++){
-    const f = flows[y], d = f/Math.pow(1+E.rate, y);
-    if (pay===null && cum<0 && cum+f>=0) pay = y-1 + (-cum)/f;
-    if (dpay===null && dcum<0 && dcum+d>=0) dpay = y-1 + (-dcum)/d;
-    cum += f; dcum += d; cumA.push(cum);
-  }
-  const y1 = years[0] || {dep:0, tax:0, cf:0};
-  return { tyr, ozFeed, oz, revenue, ore, royalty, eq, capexCircuit, capexPlant, capexMine, capex,
-    energyLeach, energyGrind, energy: energyLeach+energyGrind, heat, reagents, waste, staff, plantOpex, gmf, opex, ebitda,
-    dep:y1.dep, tax:y1.tax, cf:y1.cf, years, flows, cum:cumA, npv, irr: irrOf(flows), pay, dpay,
-    costOz: oz>0 ? (opex+royalty)/oz : NaN, margin: revenue>0 ? ebitda/revenue : NaN };
+  const flows = months.map(x=>x.flow);
+  const npv = flows.reduce((a,f,i)=> a + f/Math.pow(1+rm, i+1), 0);
+  const irrM = irrOf([0, ...flows]);
+  const taxYear = months.find(x=>x.tax>0 && x.k>12+build) || months.find(x=>x.tax>0) || {tax:0};
+  return { ...A, capexCircuit, capexPlant, capexMine, capex, wc, invest, ramp, full, build,
+    fullMonthPreTax: full.revenue - full.cost, taxYear: taxYear.tax,
+    months, flows, npv, irr: irrM===null ? null : Math.pow(1+irrM, 12)-1, pay, dpay, payMonth: pay===null ? null : Math.ceil(pay),
+    ebitda: A.revenue - A.royalty - A.opex, costOz: A.oz>0 ? (A.opex + A.royalty)/A.oz : NaN, margin: A.revenue>0 ? (A.revenue - A.royalty - A.opex)/A.revenue : NaN };
 }
 function irrOf(flows){
   const f = r => flows.reduce((a,v,i)=> a + v/Math.pow(1+r, i), 0);
@@ -944,7 +972,7 @@ function irrOf(flows){
 }
 function fmt(x, d=0){ if (x===null || x===undefined || !isFinite(x)) return '—'; return x.toLocaleString('es-CO',{minimumFractionDigits:d, maximumFractionDigits:d}); }
 
-if (typeof module !== 'undefined') module.exports = { heatLoad, heatCostPerKWh, simulate, economics, tankProfile, batchCurve, tauFor, krefOf, plantAlpha, alphaOf, gOf, o2Sat, fracCN, pulp, habashi, CAL, MODELS, LAW, PLANT_REF, DAYS };
+if (typeof module !== 'undefined') module.exports = { annualBlock, recoveryFor, heatLoad, heatCostPerKWh, simulate, economics, tankProfile, batchCurve, tauFor, krefOf, plantAlpha, alphaOf, gOf, o2Sat, fracCN, pulp, habashi, CAL, MODELS, LAW, PLANT_REF, DAYS };
 
 </script>
 <script>
@@ -964,7 +992,7 @@ const DEF = {
   cn:{ pH:10.75, C:1.0, dT:0, N:5, D:2.5, H:2.75 },
   tu:{ C:6, dT:0, N:5, D:1.75, H:1.95 },
   tkRoute:'cn',
-  eco:{ price:4100, source:'compra', pay:50, mineCost:42, capexMine:0, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10 }
+  eco:{ price:4100, source:'compra', pay:50, mineCost:42, capexMine:0, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10, build:6, wcMonths:1.5, disc:3, grind:5, tail:8, tuCap:85 }
 };
 const ZONES = [
   {id:'vetas', n:'Vetas', alt:3350, T:11, x:470, d:'Es el municipio más alto del distrito; cerca de tres cuartas partes de su territorio están en el páramo de Santurbán. Hay minería subterránea pequeña en sus vetas.', src:'Altitud: cabecera municipal (3.350 m). Temperatura media: 11 °C (Climate-Data.org); otras fuentes reportan 5–6 °C en las partes altas del páramo.'},
@@ -1051,7 +1079,8 @@ function params(route){
 function ecoParams(){
   const e = S.eco;
   return { price:e.price, source:e.source, pay:e.pay/100, mineCost:e.mineCost, capexMine:e.capexMine, elec:e.elec, heatSource:e.heatSource, diesel:e.diesel,
-    pNaCN:e.pNaCN, pTu:e.pTu, rate:e.rate/100, life:Math.max(1, Math.min(30, Math.round(e.life))) };
+    pNaCN:e.pNaCN, pTu:e.pTu, rate:e.rate/100, life:Math.max(1, Math.min(30, Math.round(e.life))),
+    build:Math.max(0, Math.min(36, Math.round(e.build))), wcMonths:e.wcMonths, disc:e.disc/100, grind:e.grind, tail:e.tail, tuCap:e.tuCap/100 };
 }
 
 // ---------- pestañas ----------
@@ -1540,7 +1569,13 @@ const ECO_SPEC = {
   pNaCN:{lab:'Precio del NaCN', u:'US$/t', s:''},
   pTu:{lab:'Precio de la tiourea', u:'US$/t', s:''},
   rate:{lab:'Tasa de descuento', u:'%', s:'Solo cambia el VAN y la recuperación descontada'},
-  life:{lab:'Vida útil del proyecto', u:'años', s:'Entre 1 y 30 años'}
+  life:{lab:'Vida útil del proyecto', u:'años', s:'Años de operación, después de la construcción (1 a 30)'},
+  build:{lab:'Construcción', u:'meses', s:'La inversión se paga en cuotas iguales y no hay producción. El mes siguiente es el arranque: 50 % de capacidad y se cobra el 50 % del oro (el resto queda en proceso hasta el cierre)'},
+  wcMonths:{lab:'Capital de trabajo', u:'meses de costos', s:'Compra de mineral y costos de operación a plena capacidad; se suma a la inversión y se recupera al cierre'},
+  tuCap:{lab:'Recuperación industrial de la tiourea', u:'%', s:'Tope sin calentamiento, para comparar en igualdad con la cianuración. Si la simulación da menos, se usa ese valor'},
+  grind:{lab:'Medios de molienda', u:'US$/t', s:'Bolas y revestimientos'},
+  tail:{lab:'Relaves y carbón activado', u:'US$/t', s:'Manejo de relaves y reposición de carbón'},
+  disc:{lab:'Descuento comercial', u:'% del precio', s:'Refinación y transporte del oro'}
 };
 function mountEco(){
   const inp = k => { const o = ECO_SPEC[k]; return `<div class="inp" data-k="${k}"><label for="e-${k}">${o.lab}</label>
@@ -1550,7 +1585,8 @@ function mountEco(){
     <div class="s">Define qué paga la planta por cada tonelada y quién liquida la regalía.</div></div>` +
     ['pay','mineCost','capexMine','elec'].map(inp).join('') + `<div class="inp"><label for="e-heatSource">Calentamiento de la pulpa con</label>
     <select id="e-heatSource" class="sel full"><option value="elec">Resistencias eléctricas (100 % de la energía llega a la pulpa)</option><option value="acpm">Caldera de ACPM (80 % de rendimiento)</option></select>
-    <div class="s">Solo importa si en Simulación o aquí subes la temperatura de la pulpa.</div></div>` + ['diesel','pNaCN','pTu','rate','life'].map(inp).join('');
+    <div class="s">Solo importa si en Simulación o aquí subes la temperatura de la pulpa.</div></div>` + ['diesel','pNaCN','pTu','rate','life'].map(inp).join('') +
+    `<div class="grp-title" style="margin-top:18px">Supuestos de operación</div>` + ['build','wcMonths','tuCap','grind','tail','disc'].map(inp).join('');
   document.getElementById('e-source').value = S.eco.source;
   document.getElementById('e-source').addEventListener('change', e=>{ S.eco.source = e.target.value; syncEco(); schedule(); });
   document.getElementById('e-heatSource').value = S.eco.heatSource;
@@ -1568,9 +1604,9 @@ function renderEco(){
     <div class="krow"><span><span class="dot" style="background:${COL.cn}"></span>Cianuración</span><b>${fm(va)}</b></div>
     <div class="krow"><span><span class="dot" style="background:${COL.tu}"></span>Tiourea</span><b>${fm(vb)}</b></div>${hint?`<div class="small" style="margin-top:8px">${hint}</div>`:''}</div>`;
   document.getElementById('eco-kpis').innerHTML =
-    kp('Valor actual neto (VAN)', a.npv, b.npv, kmoney, `Ganancia total traída a hoy, con ${f(E.rate*100,0)} % de descuento en ${E.life} años`) +
+    kp('Valor actual neto (VAN)', a.npv, b.npv, kmoney, `Flujo mensual traído a hoy al ${f(E.rate*100,0)} % anual: ${E.build} meses de construcción y ${E.life} años de operación`) +
     kp('Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,0)+' %', 'Rentable si supera la tasa de descuento') +
-    kp('Recuperación de la inversión', a.pay, b.pay, yrs, `Descontada al ${f(E.rate*100,0)} %: ${yrs(a.dpay)} y ${yrs(b.dpay)}`);
+    kp('Payback real', a.payMonth, b.payMonth, x=> x===null ? 'No se recupera' : 'Mes '+x, `Mes en que el flujo acumulado pasa a positivo, contando ${E.build} meses de construcción. Descontado al ${f(E.rate*100,0)} %: ${a.dpay===null?'no se recupera':'mes '+Math.ceil(a.dpay)} y ${b.dpay===null?'no se recupera':'mes '+Math.ceil(b.dpay)}`);
   // calentamiento
   const z = zoneOf(S.zone);
   document.getElementById('eh-amb').textContent = `${z?z.n+' · ':''}temperatura ambiente ${f(S.Tamb,1)} °C`;
@@ -1583,60 +1619,67 @@ function renderEco(){
   // tabla principal
   const sec = t => ['§', t];
   const rows = [
-    sec('1. Producción'),
-    ['Mineral procesado', a.tyr, b.tyr, x=>f(x,0)+' t/año'],
-    ['Oro que trae el mineral', a.ozFeed, b.ozFeed, x=>f(x,0)+' oz/año'],
-    ['Recuperación de oro', R.cn.s.R*100, R.tu.s.R*100, x=>f(x,1)+' %'],
-    ['Oro producido', a.oz, b.oz, x=>f(x,0)+' oz/año'],
-    ['Ingresos por venta', a.revenue, b.revenue, money, true],
-    sec('2. Inversión inicial (año 0)'),
+    sec('1. Producción a plena capacidad (por mes)'),
+    ['Mineral procesado', a.tyr/12, b.tyr/12, x=>f(x,1)+' t'],
+    ['Oro que trae el mineral', a.ozFeed/12, b.ozFeed/12, x=>f(x,2)+' oz'],
+    ['Recuperación usada en Economía', a.R*100, b.R*100, x=>f(x,1)+' %'],
+    ['Oro producido', a.oz/12, b.oz/12, x=>f(x,2)+' oz'],
+    ['Venta del oro (precio × onzas)', (a.revenue+a.discount)/12, (b.revenue+b.discount)/12, money],
+    [`− Descuento comercial (${f(E.disc*100,1)} %)`, a.discount/12, b.discount/12, x=>money(-x)],
+    ['Ingreso neto por venta', a.revenue/12, b.revenue/12, money, true],
+    sec('2. Inversión inicial'),
     ['Circuito de lixiviación (tanques elegidos)', a.capexCircuit, b.capexCircuit, money],
     ['Resto de la planta de beneficio (referencia DNP)', a.capexPlant, b.capexPlant, money],
     ...(own ? [['Inversión en la mina', a.capexMine, b.capexMine, money]] : []),
-    ['Inversión total', a.capex, b.capex, money, true],
-    sec('3. Costos anuales'),
-    [own ? 'Extracción en la mina' : 'Compra del mineral a mineros', a.ore, b.ore, money],
-    ['Reactivos', a.reagents, b.reagents, money],
-    ['Energía: molienda, agitación y bombeo', a.energy, b.energy, money],
-    ['Calentamiento de la pulpa', a.heat, b.heat, money],
-    ['Tratamiento de residuos', a.waste, b.waste, money],
-    ['Personal, mantenimiento y laboratorio', a.staff, b.staff, money],
-    ['4×1000 sobre los pagos', a.gmf, b.gmf, money],
-    ['Costo anual total', a.opex, b.opex, money, true],
+    [`Capital de trabajo (${f(E.wcMonths,1)} meses de costos)`, a.wc, b.wc, money],
+    [`Inversión total (en ${E.build} cuotas mensuales)`, a.invest, b.invest, money, true],
+    sec('3. Costos a plena capacidad (por mes)'),
+    [own ? 'Extracción en la mina' : 'Compra del mineral a mineros', a.ore/12, b.ore/12, money],
+    ['Reactivos', a.reagents/12, b.reagents/12, money],
+    ['Energía: molienda, agitación y bombeo', a.energy/12, b.energy/12, money],
+    ['Calentamiento de la pulpa', a.heat/12, b.heat/12, money],
+    ['Medios de molienda', a.grindMedia/12, b.grindMedia/12, money],
+    ['Relaves y carbón activado', a.tailings/12, b.tailings/12, money],
+    ['Tratamiento de residuos', a.waste/12, b.waste/12, money],
+    ['Personal, mantenimiento y laboratorio', a.staff/12, b.staff/12, money],
+    ['4×1000 sobre los pagos', a.gmf/12, b.gmf/12, money],
+    ['Costo mensual total', a.opex/12, b.opex/12, money, true],
     sec('4. Obligaciones de ley'),
-    ['Regalías (4 % sobre el 80 % del precio)', a.royalty, b.royalty, x=> own ? money(x) : 'Las paga el minero'],
-    ['Impuesto de renta (35 %)', a.tax, b.tax, money],
+    ['Regalías por mes (4 % sobre el 80 % del precio)', a.royalty/12, b.royalty/12, x=> own ? money(x) : 'Las paga el minero'],
+    ['Impuesto de renta de un año completo (se paga cada 12 meses)', a.taxYear, b.taxYear, money],
     sec('5. Rentabilidad'),
-    ['Utilidad operativa (EBITDA)', a.ebitda, b.ebitda, money],
+    ['Flujo mensual antes de renta', a.fullMonthPreTax, b.fullMonthPreTax, money, true],
     ['Margen sobre ingresos', a.margin*100, b.margin*100, x=>f(x,1)+' %'],
-    ['Flujo de caja anual (años 1 a 10)', a.cf, b.cf, money, true],
     ['Costo por onza producida', a.costOz, b.costOz, x=>'US$ '+f(x,0)+'/oz'],
     ['Valor actual neto (VAN)', a.npv, b.npv, money, true],
     ['Tasa interna de retorno (TIR)', a.irr, b.irr, x=> x===null?'—':f(x*100,1)+' %'],
-    ['Recuperación de la inversión', a.pay, b.pay, yrs, true],
-    ['Recuperación descontada', a.dpay, b.dpay, yrs]
+    ['Payback real', a.payMonth, b.payMonth, x=> x===null?'No se recupera':'Mes '+x, true],
+    ['Payback descontado', a.dpay, b.dpay, x=> x===null?'No se recupera':'Mes '+Math.ceil(x)]
   ];
+
   document.getElementById('eco-table').innerHTML = `<thead><tr><th>Indicador</th><th class="r"><span class="dot" style="background:${COL.cn}"></span>Cianuración</th><th class="r"><span class="dot" style="background:${COL.tu}"></span>Tiourea</th></tr></thead><tbody>${
     rows.map(r=> r[0]==='§' ? `<tr class="sec-row"><td colspan="3">${r[1]}</td></tr>` : `<tr${r[4]?' class="strong"':''}><td>${r[0]}</td><td class="r">${r[3](r[1])}</td><td class="r">${r[3](r[2])}</td></tr>`).join('')}</tbody>`;
-  // flujo año a año
-  const yrRows = a.flows.map((v,y)=>`<tr${y===0?' class="strong"':''}><td>${y}</td><td class="r">${kmoney(v)}</td><td class="r">${kmoney(a.cum[y])}</td><td class="r">${kmoney(b.flows[y])}</td><td class="r">${kmoney(b.cum[y])}</td></tr>`).join('');
-  const why = (lab, e) => { if (e.pay===null) return `${lab}: el acumulado no llega a cero en ${E.life} años.`;
-    const y = Math.floor(e.pay), prev = e.cum[y], f1 = e.flows[y+1];
-    return `${lab}: al final del año ${y} faltan ${money(-prev)} y el año ${y+1} deja ${money(f1)}; ${money(-prev)} ÷ ${money(f1)} = ${f(e.pay-y,3)} → <b>${f(e.pay,2)} años (${f(e.pay*12,1)} meses)</b>.`; };
-  document.getElementById('eco-pay').innerHTML = `<h3>Flujo de caja año a año</h3>
-    <p class="small" style="margin:6px 0 10px">Año 0: inversión. Cada año siguiente: ingresos − regalías − costos − impuesto de renta. La inversión se recupera cuando el acumulado llega a cero.</p>
-    <div class="tbl-wrap" style="background:none;max-height:360px;overflow:auto"><table><thead><tr><th>Año</th><th class="r">Cianuración</th><th class="r">Acum.</th><th class="r">Tiourea</th><th class="r">Acum.</th></tr></thead><tbody>${yrRows}</tbody></table></div>
+  // flujo mes a mes (36 meses)
+  const N36 = Math.min(36, a.months.length);
+  const mrow = k => { const x = a.months[k], y = b.months[k];
+    return `<tr${(a.payMonth===x.k||b.payMonth===x.k)?' class="strong"':''}><td>${x.k}</td><td>${x.stage}${x.tax>0?' · renta':''}</td><td class="r">${kmoney(x.flow)}</td><td class="r">${kmoney(x.cum)}</td><td class="r">${kmoney(y.flow)}</td><td class="r">${kmoney(y.cum)}</td></tr>`; };
+  const why = (lab, e) => { if (e.pay===null) return `${lab}: el acumulado no pasa a positivo en la vida útil.`;
+    const k = e.payMonth, prev = e.months[k-2] ? e.months[k-2].cum : 0;
+    return `${lab}: al final del mes ${k-1} el acumulado es ${money(prev)}; el mes ${k} deja ${money(e.months[k-1].flow)} → <b>payback en el mes ${k}</b> (${f(e.pay,2)} meses).`; };
+  document.getElementById('eco-pay').innerHTML = `<h3>Flujo de caja mes a mes</h3>
+    <p class="small" style="margin:6px 0 10px">Meses 1 a ${E.build}: construcción (inversión y capital de trabajo en cuotas iguales, sin producción). Mes ${E.build+1}: arranque al 50 % de capacidad, se cobra la mitad del oro. Desde el mes ${E.build+2}: plena capacidad. El impuesto de renta se paga una vez al año (meses 12, 24, 36…). En negrita, el mes del payback.</p>
+    <div class="tbl-wrap" style="background:none;max-height:420px;overflow:auto"><table><thead><tr><th>Mes</th><th>Etapa</th><th class="r">Cianuración</th><th class="r">Acum.</th><th class="r">Tiourea</th><th class="r">Acum.</th></tr></thead><tbody>${Array.from({length:N36},(_,k)=>mrow(k)).join('')}</tbody></table></div>
     <p class="small" style="margin:10px 0 0">${why('Cianuración', a)}<br>${why('Tiourea', b)}</p>`;
   const cc = CH['ch-eco-cum'];
-  cc.data.datasets = ['cn','tu'].map(r=>({label:RNAME[r], data:R[r].e.cum.map((v,i)=>({x:i, y:v/1e6})), borderColor:COL[r], pointRadius:3}));
-  cc.data.datasets.push({label:'cero · línea', data:[{x:0,y:0},{x:E.life,y:0}], borderColor:COL.ink, borderWidth:1, borderDash:[4,4]});
-  cc.options.scales.x.min = 0; cc.options.scales.x.max = E.life; cc.update();
+  cc.data.datasets = ['cn','tu'].map(r=>({label:RNAME[r], data:R[r].e.months.slice(0,36).map(x=>({x:x.k, y:x.cum/1e6})), borderColor:COL[r], pointRadius:2}));
+  cc.data.datasets.push({label:'cero · línea', data:[{x:0,y:0},{x:36,y:0}], borderColor:COL.ink, borderWidth:1, borderDash:[4,4]});
+  cc.options.scales.x.min = 0; cc.options.scales.x.max = 36; cc.update();
   const cp = CH['ch-eco-price'], pr = []; for (let p=1500;p<=6000;p+=150) pr.push(p);
   cp.data.datasets = ['cn','tu'].map(r=>({label:RNAME[r], borderColor:COL[r], data: pr.map(p=>({x:p, y: economics(r, R[r].P, R[r].s, {...E, price:p}).npv/1e6}))}));
   cp.data.datasets.push({label:'Precio actual · punto', data:[{x:E.price,y:a.npv/1e6},{x:E.price,y:b.npv/1e6}], borderColor:COL.ink, backgroundColor:'#fff', pointRadius:6, showLine:false});
   cp.data.datasets.push({label:'cero · línea', data:[{x:1500,y:0},{x:6000,y:0}], borderColor:COL.ink, borderWidth:1, borderDash:[4,4]});
   cp.options.scales.x.min = 1500; cp.options.scales.x.max = 6000; cp.update();
-  document.getElementById('eco-note').innerHTML = `Inversión: circuito de lixiviación con los costos de la Tabla 8 del documento de referencia y el resto de la planta con la planta comunitaria tipo del DNP (hasta 40 t/d, COP 2.714 millones de 2021), ambos escalados con la regla de los seis décimos. ${own ? 'Mina propia: la regalía la paga la planta y el costo de la mina se cobra por tonelada.' : 'Compra de mineral: la planta paga al minero un porcentaje del oro que trae el mineral; la regalía la liquida el minero.'} Ley colombiana incluida: impuesto de renta del 35 % (art. 240 ET), depreciación del 10 % anual (art. 137 ET), regalía del 4 % sobre el 80 % del precio internacional (Ley 141 de 1994; Ley 756 de 2002), deducible en renta (C-489 de 2023), y 4×1000 con 50 % deducible (art. 115 ET). La explotación minera no paga impuestos municipales (art. 231 del Código de Minas).`;
+  document.getElementById('eco-note').innerHTML = `Flujo de caja mensual durante ${E.build} meses de construcción y ${E.life} años de operación; al cierre se recuperan el capital de trabajo y el oro que quedó en proceso en el arranque. VAN con la tasa anual convertida a mensual; TIR anualizada. Inversión: circuito de lixiviación con los costos de la Tabla 8 del documento de referencia y el resto de la planta con la planta comunitaria tipo del DNP (hasta 40 t/d, COP 2.714 millones de 2021), ambos escalados con la regla de los seis décimos. ${own ? 'Mina propia: la regalía la paga la planta y el costo de la mina se cobra por tonelada.' : 'Compra de mineral: la planta paga al minero un porcentaje del oro que trae el mineral; la regalía la liquida el minero.'} Ley colombiana incluida: impuesto de renta del 35 % (art. 240 ET), depreciación del 10 % anual (art. 137 ET), regalía del 4 % sobre el 80 % del precio internacional (Ley 141 de 1994; Ley 756 de 2002), deducible en renta (C-489 de 2023), y 4×1000 con 50 % deducible (art. 115 ET). La explotación minera no paga impuestos municipales (art. 231 del Código de Minas).`;
 }
 
 // ---------- zonas mineras y montaña ----------
@@ -1738,8 +1781,8 @@ function renderSources(){
       'Calor para la pulpa que entra (c<sub>p</sub> 0,8 y 4,186 kJ/kg·°C) más las pérdidas de los tanques abiertos: q<sub>sup</sub> y q<sub>pared</sub> según las tablas de Engineering ToolBox para superficie de agua y acero sin aislar en aire quieto, y el vapor que arrastra el aire de la cianuración. Electricidad al 100 % o caldera de ACPM al 80 % (35,8 MJ/L).'],
     ['Inversión', String.raw`\[ I=C_{circuito}\left(\frac{V}{V_{ref}}\right)^{0{,}6}+C_{DNP}\left(\frac{\text{t/d}}{40}\right)^{0{,}6}\;(+\ \text{mina}) \]`,
       'Circuito: Tabla 8 del documento × 1,78 (costo directo) × 1,12 (ingeniería) × 1,30 (contingencia); 1,5 veces en tiourea por materiales resistentes al ácido. C<sub>DNP</sub> = COP 2.714 millones de 2021 a TRM 3.743.'],
-    ['Flujo de caja e indicadores', String.raw`\[ FC=\text{Ingresos}-\text{Regalías}-\text{Costos}-0{,}35\,(\text{EBITDA}-0{,}1\,I),\quad \mathrm{VAN}=\sum_{t}\frac{FC_t}{(1+i)^{t}} \]`,
-      'Ingresos = onzas recuperadas × precio. Costos: mineral (compra o mina), reactivos, energía, calentamiento, residuos, personal y 4×1000. La recuperación de la inversión es el año en que el flujo acumulado llega a cero.']
+    ['Flujo de caja mensual', String.raw`\[ FC_m=\text{Ingreso}_m-\text{Costos}_m-\text{Inversión}_m-\text{Renta}_{m=12,24,\dots},\quad \mathrm{VAN}=\sum_{m}\frac{FC_m}{(1+i)^{m/12}} \]`,
+      'Construcción: inversión y capital de trabajo (1,5 meses de costos) en cuotas, sin producción. Arranque: 50 % de capacidad, se cobra el 50 % del oro. Ingreso = onzas × precio × (1 − 3 % de descuento comercial). Costos: mineral, reactivos, energía, calentamiento, residuos, US$ 5/t de medios de molienda, US$ 8/t de relaves y carbón, personal y 4×1000. Renta del 35 % pagada una vez al año. Payback real: mes en que el acumulado pasa a positivo.']
   ];
   document.getElementById('eq-just').innerHTML = EQ.map(([t,e,j])=>`<div class="card"><h3>${t}</h3><div class="eqn">${e}</div><p class="small">${j}</p></div>`).join('');
   if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
@@ -1782,7 +1825,7 @@ CH['ch-tanks'] = new Chart(document.getElementById('ch-tanks'), { type:'bar', da
 document.getElementById('tk-size').addEventListener('click', sizeTanks);
 for (const r of ['cn','tu']) document.getElementById('tk-r-'+r).addEventListener('click', ()=>{ S.tkRoute = r; mountTankSliders(); schedule(); });
 mountTankSliders();
-lineChart('ch-eco-cum','Año','Millones de US$',{yd:2});
+lineChart('ch-eco-cum','Mes','Millones de US$',{yd:2});
 lineChart('ch-eco-price','Precio del oro (US$/oz)','VAN (millones de US$)',{yd:2});
 mountEco();
 renderSources();
