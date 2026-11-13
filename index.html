@@ -415,7 +415,7 @@ ol.refs li{margin:0 0 10px}
   <div class="hrow" style="margin-top:40px">
     <figure class="card fig">
       <div id="mountain"></div>
-      <figcaption><b>Pulsa un punto de la montaña</b> para comparar altitud, temperatura y oxígeno disponible en cada zona, y usar esas condiciones en la simulación. Zona activa: <b id="zone-active"></b>.</figcaption>
+      <figcaption><b>Pulsa un punto de la montaña</b> para comparar altitud, temperatura y oxígeno disponible en cada zona. Zona activa: <b id="zone-active"></b>.</figcaption>
     </figure>
 
     <div class="feature">
@@ -1799,11 +1799,12 @@ function applyZone(id){
 }
 function zoneO2(z){ return o2Sat(z.T, z.alt); }
 const MY = alt => 340 - alt*0.072;
+let zonePicked = null;   // se resalta en negro solo el punto que el usuario pulsó
 function renderMountain(){
   const el = document.getElementById('mountain'); if (!el) return;
   const ticks = [1000,2000,3000,4000].map(a=>`<line x1="40" x2="640" y1="${MY(a)}" y2="${MY(a)}" stroke="#D7D6D1" stroke-dasharray="3 5"/><text x="48" y="${MY(a)-5}" font-size="12" fill="#6E6D68" font-family="Manrope, sans-serif">${f(a,0)} m</text>`).join('');
   const mtn = 'M40 340 L40 282 C 80 276, 110 272, 140 266 C 200 250, 230 222, 265 214 C 300 206, 330 196, 365 186 C 420 160, 450 112, 480 96 C 505 70, 525 50, 548 44 C 575 52, 610 110, 640 150 L640 340 Z';
-  const marks = ZONES.map(z=>{ const sel = S.zone===z.id, y = MY(z.alt), dn = (z.id==='surata'||z.id==='bucaramanga'), ly = dn ? y+34 : y-62;
+  const marks = ZONES.map(z=>{ const sel = zonePicked===z.id, y = MY(z.alt), dn = (z.id==='surata'||z.id==='bucaramanga'), ly = dn ? y+34 : y-62;
     return `<g class="zmark" data-z="${z.id}" tabindex="0" role="button" aria-label="${z.n}: ver condiciones">
       <line x1="${z.x}" x2="${z.x}" y1="${y}" y2="${dn?y+34:y-34}" stroke="#1F1F1D" stroke-width="1.5"/>
       <circle cx="${z.x}" cy="${y}" r="${sel?11:9}" fill="${sel?'#1F1F1D':'#E0A448'}" stroke="#1F1F1D" stroke-width="2"/>
@@ -1817,7 +1818,7 @@ function renderMountain(){
     <text x="600" y="${MY(3000)+18}" text-anchor="middle" font-size="12" fill="#3f4d2c" font-family="Manrope, sans-serif">Páramo de Santurbán</text>
     <text x="600" y="${MY(3000)+33}" text-anchor="middle" font-size="12" fill="#3f4d2c" font-family="Manrope, sans-serif">(sobre ~3.000 m)</text>
     ${marks}</svg>`;
-  el.querySelectorAll('.zmark').forEach(g=>{ const go=()=> openZone(g.dataset.z); g.addEventListener('click',go); g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} }); });
+  el.querySelectorAll('.zmark').forEach(g=>{ const go=()=>{ zonePicked = g.dataset.z; renderMountain(); openZone(zonePicked); }; g.addEventListener('click',go); g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} }); });
   const cur = zoneOf(S.zone);
   document.getElementById('zone-active').textContent = cur ? cur.n : 'condiciones personalizadas';
 }
