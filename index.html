@@ -718,6 +718,9 @@ const LAW = { royalty:0.04, royaltyBase:0.80, tax:0.35, dep:0.10, gmf:0.004, gmf
 const PRICES = { lime:390, acid:300, ferric:350, smbs:500 };              // US$/t
 const DOSES = { lime:1.0, acid:15, ferric:2 };                            // kg/t
 const FIXED = { personnel:240651, lab:20000, maint:0.04, recycle:0.071 }; // documento, Tabla 9
+const STAFF_REF_TPD = 20, STAFF_EXP = 0.35;  // personal escalado con (t/d / 20)^0,35 (regla del usuario)
+const FERRIC_REF_C = 6;                    // 2 kg/t de férrico a 6 g/L de tiourea (Fe³⁺/tiourea = 0,5): escala con la concentración
+const AUX_KWH = 4.0;                       // kWh/t: trituración, bandas, filtros y fundición (regla del usuario)
 
 // ---------- calor: pérdidas de tanques abiertos ----------
 // Engineering ToolBox, «Heat Loss from Open Water Tanks»: aire quieto a 15,6 °C; Btu/ft²·h × 3,1525 = W/m².
@@ -830,6 +833,8 @@ function pulp(feed, sol){
 }
 const tankVol = (D, H) => FILL*Math.PI/4*D*D*H;
 
+// tope industrial de recuperación: solo tiourea (P.tuCap, fracción); la cianuración no tiene tope
+function capOf(route, P){ return route==='tu' && P.tuCap!=null ? P.tuCap : 1; }
 // ---------- simulación de un punto de operación ----------
 // P = {scen, model, ley, feed, sol, p80, alt, Tamb, o2 (null = saturación con aire), pH, C, dT, N, D, H}
 function simulate(route, P, opt){
@@ -845,12 +850,13 @@ function simulate(route, P, opt){
   } else { F = P.C*arr(T); Fref = cal.cond.C*arr(cal.cond.T); }
   const kref = krefOf(P.model, P.scen, route);
   const k = kref*(F/Fref)*Math.pow(cal.cond.p80/P.p80, NSIZE);
-  const R = cal.Rinf*plantAlpha(P.model, k, tau, P.N);
+  const Rraw = cal.Rinf*plantAlpha(P.model, k, tau, P.N);
+  const cap = capOf(route, P), R = Math.min(Rraw, cap);          // tope industrial de la tiourea en todas las pestañas
   const consOf = (Rx, t) => route==='cn'
     ? P.ley*Rx*2*49.01/196.97/1000 + cal.kd*P.C*pp.LS*t
     : cal.a*Math.pow(P.C, TU_EXP)*pp.LS*t;
   const AuFeed = pp.Ms*P.ley;                                   // g/h
-  return { route, T, R, Rinf:cal.Rinf, k, kref, tau, N:P.N, Vt, V:P.N*Vt, ...pp,
+  return { route, T, R, Rraw, cap, Rinf:cal.Rinf, k, kref, tau, N:P.N, Vt, V:P.N*Vt, ...pp,
     cons: consOf(R, tau), AuFeed, AuGd: AuFeed*R*24, AuSol: AuFeed*R/pp.water, tails: P.ley*(1-R),
     hab, o2sat, heatLoad: heatLoad(route, P, pp), heatKW: heatLoad(route, P, pp).total,
     grindKWh: 10*WI*(1/Math.sqrt(P.p80) - 1/Math.sqrt(F80)), consOf };
@@ -859,18 +865,18 @@ function simulate(route, P, opt){
 function tankProfile(route, P){
   const s = simulate(route, P), out = [];
   for (let i=1;i<=s.N;i++){
-    const t = s.tau*i/s.N, R = s.Rinf*plantAlpha(P.model, s.k, t, i);
+    const t = s.tau*i/s.N, R = Math.min(s.Rinf*plantAlpha(P.model, s.k, t, i), s.cap);
     out.push({ i, tcum:t, R, AuSol: s.AuFeed*R/s.water, tails: P.ley*(1-R), reag: s.consOf(R, t)*s.Ms });
   }
   return { s, out };
 }
 function batchCurve(route, P, tmax, pts){
   const s = simulate(route, P), out = [];
-  for (let i=0;i<=pts;i++){ const t = tmax*i/pts; out.push({x:t, y:100*s.Rinf*alphaOf(P.model, s.k*t)}); }
+  for (let i=0;i<=pts;i++){ const t = tmax*i/pts; out.push({x:t, y:100*Math.min(s.Rinf*alphaOf(P.model, s.k*t), s.cap)}); }
   return out;
 }
 function tauFor(route, P, targetPct){                    // horas de residencia para una recuperación objetivo
-  const Rinf = CAL[P.scen][route].Rinf;
+  const Rinf = Math.min(CAL[P.scen][route].Rinf, capOf(route, P));
   if (targetPct/100 >= Rinf*0.999) return null;
   let lo = 0.05, hi = 2000;
   if (simulate(route, P, {tau:hi}).R*100 < targetPct) return null;
@@ -897,7 +903,7 @@ function annualBlock(route, P, s, E){
   const sV = Math.pow(s.Vt/49.8, 0.6), sQ = Math.pow(s.Q/8, 0.6), sM = Math.pow(s.Ms/(80/24), 0.6);
   const eq = 199039/5*s.N*sV*fmat + 14353*sQ*fmat + (route==='cn' ? 5885 : 10150)*sM;
   const kWleach = (2.2*(s.Q/8) + 7.5*s.N*(s.Vt/49.8) + 3*(s.Q/8) + (route==='cn' ? 2.2*(s.Ms/(80/24)) : 0))*31.24/44.9;
-  const energy = kWleach*24*DAYS/1000*E.elec + s.grindKWh*tyr/1000*E.elec;
+  const energy = kWleach*24*DAYS/1000*E.elec + (s.grindKWh + AUX_KWH)*tyr/1000*E.elec;   // + auxiliares por tonelada
   const heat = s.heatKW*24*DAYS*heatCostPerKWh(E);
   const cons = s.consOf(R, s.tau);
   let reagents, waste;
@@ -905,22 +911,23 @@ function annualBlock(route, P, s, E){
     reagents = cons*tyr*E.pNaCN/1000 + DOSES.lime/0.85*tyr*PRICES.lime/1000;
     waste = P.C*s.LS*(1-FIXED.recycle)*64.07/49.01*1.5/0.674*tyr*PRICES.smbs/1000;
   } else {
-    reagents = cons*tyr*E.pTu/1000 + DOSES.acid*tyr*PRICES.acid/1000 + DOSES.ferric*tyr*PRICES.ferric/1000;
+    reagents = cons*tyr*E.pTu/1000 + DOSES.acid*tyr*PRICES.acid/1000 + DOSES.ferric*(P.C/FERRIC_REF_C)*tyr*PRICES.ferric/1000;
     waste = (Math.pow(10,-1.5)/2 + 1.5*0.5*P.C/76.12)*56.08*s.LS*(1-FIXED.recycle)/0.85*tyr*PRICES.lime/1000;
   }
   const grindMedia = (E.grind||0)*tyr, tailings = (E.tail||0)*tyr;
-  const staff = FIXED.personnel + FIXED.lab + FIXED.maint*eq;      // fijo: no baja en el arranque
+  const capexCircuit = eq*1.78*1.12*1.30, capexPlant = PLANT_REF*Math.pow(P.feed/PLANT_REF_TPD, 0.6);
+  const personnel = FIXED.personnel*Math.pow(P.feed/STAFF_REF_TPD, STAFF_EXP), maint = FIXED.maint*(capexCircuit + capexPlant);
+  const staff = personnel + FIXED.lab + maint;                  // fijo en el mes: no baja en el arranque
   const variable = ore + reagents + energy + heat + waste + grindMedia + tailings;
   const gmf = LAW.gmf*(variable + staff + royalty);
-  return { R, tyr, ozFeed, oz, revenue, discount: oz*E.price*(E.disc||0), ore, royalty, eq, energy, heat, reagents, waste, grindMedia, tailings, staff, variable, gmf,
+  return { R, tyr, ozFeed, oz, revenue, discount: oz*E.price*(E.disc||0), ore, royalty, eq, capexCircuit, capexPlant, personnel, maint, energy, heat, reagents, waste, grindMedia, tailings, staff, variable, gmf,
            opex: variable + staff + gmf, plantOpex: reagents + energy + heat + waste + staff + grindMedia + tailings };
 }
 function economics(route, P, s, E){
   const A = annualBlock(route, P, s, E);
   const own = E.source==='propia';
   // inversión
-  const capexCircuit = A.eq*1.78*1.12*1.30;
-  const capexPlant = PLANT_REF*Math.pow(P.feed/PLANT_REF_TPD, 0.6);
+  const capexCircuit = A.capexCircuit, capexPlant = A.capexPlant;
   const capexMine = own ? E.capexMine : 0;
   const capex = capexCircuit + capexPlant + capexMine;
   const wc = (E.wcMonths||0)*(A.opex + A.royalty)/12;                // mineral + OPEX + regalías (mina propia), a plena capacidad
@@ -1096,7 +1103,8 @@ function syncAll(){
 function params(route){
   const r = S[route];
   return { scen:S.scen, model:S.model, ley:S.ley, feed:S.feed, sol:S.sol, p80:S.p80, alt:S.alt, Tamb:S.Tamb,
-    o2: S.zone==='custom' ? S.o2 : null, pH: route==='cn' ? r.pH : 1.5, C:r.C, dT:r.dT, N:r.N, D:r.D, H:r.H };
+    o2: S.zone==='custom' ? S.o2 : null, pH: route==='cn' ? r.pH : 1.5, C:r.C, dT:r.dT, N:r.N, D:r.D, H:r.H,
+    tuCap: route==='tu' ? Math.max(0, Math.min(100, Number(S.eco.tuCap)))/100 : null };
 }
 function ecoParams(){
   const e = S.eco;
@@ -1134,14 +1142,14 @@ const FLOWS = {
   cn: [
     {title:'Conminución y clasificación', stages: COMMIN},
     {title:'Pretratamiento y cianuración', stages:[
-      {no:'6', n:'Pretratamiento', e:'Gravimetría, flotación u oxidación', opt:true, x:'Solo se usa si los ensayos lo justifican. Cuando el oro está encerrado en pirita, el cianuro no lo alcanza; romper la pirita con calor (tostación), con oxígeno a presión (autoclave) o con bacterias (biooxidación) lo deja expuesto. En un mineral del distrito, la biooxidación previa subió la recuperación con cianuro de cerca de 75 % a 93 %.', v:[['Temperatura de tostación','450–680 °C'],['Biooxidación','pH 1,0–1,8 · 35–45 °C · 48–72 h']], o:'Dejar accesible el oro encerrado en sulfuros.'},
+      {no:'6', n:'Pretratamiento', e:'Gravimetría, flotación u oxidación', opt:true, nc:'No se cobra en Economía: el simulador no tiene un caso con pretratamiento. Si los ensayos lo exigen, hay que agregar su inversión y su costo de operación.', x:'Solo se usa si los ensayos lo justifican. Cuando el oro está encerrado en pirita, el cianuro no lo alcanza; romper la pirita con calor (tostación), con oxígeno a presión (autoclave) o con bacterias (biooxidación) lo deja expuesto. En un mineral del distrito, la biooxidación previa subió la recuperación con cianuro de cerca de 75 % a 93 %.', v:[['Temperatura de tostación','450–680 °C'],['Biooxidación','pH 1,0–1,8 · 35–45 °C · 48–72 h']], o:'Dejar accesible el oro encerrado en sulfuros.'},
       {no:'7', n:'Acondicionamiento', e:'Tanque agitado TK-701', x:'Se agrega cal para volver alcalina la pulpa antes del cianuro. Así el cianuro permanece disuelto como CN⁻; si la pulpa se vuelve ácida, se forma ácido cianhídrico (HCN), un gas tóxico.', v:[['pH','10,5–11'],['Cal (CaO)','1,0 kg/t'],['Tanque','Ø 2,3 × 2,3 m · 8,5 m³ útiles'],['Tiempo de residencia','≈ 1,06 h']], o:'Seguridad y cianuro disponible para disolver el oro.'},
-      {no:'8', n:'Cianuración', e:'Tanques TK-801 a TK-805', x:'La pulpa recorre cinco tanques agitados donde el cianuro y el oxígeno del aire disuelven el oro. El paso más lento es el viaje del oxígeno y del cianuro hasta la superficie del oro, por eso se mantiene aire y agitación constantes.', r:'4 Au + 8 CN⁻ + O₂ + 2 H₂O → 4 Au(CN)₂⁻ + 4 OH⁻', v:[['NaCN','1,0–1,5 g/L'],['Tiempo de residencia','24–30 h'],['Oxígeno disuelto','≥ 6 mg/L'],['Aire','45 m³/h (diseño 67 m³/h)'],['Tanques','5 × 49,8 m³ útiles'],['Consumo de NaCN','0,50 kg/t']], o:'Disolver alrededor del 90 % del oro.'},
-      {no:'9', n:'Separación sólido-líquido', e:'Filtro prensa', x:'Separa el líquido con oro disuelto (solución rica) de la arena sin valor. El agua de lavado arrastra el oro que queda retenido en la torta.', v:[['Salidas','Solución rica y sólidos lavados']], o:'Enviar la solución rica a clarificación.'}
+      {no:'8', n:'Cianuración', e:'Tanques TK-801 a TK-805', x:'La pulpa recorre una serie de tanques agitados donde el cianuro y el oxígeno del aire disuelven el oro. El paso más lento es el viaje del oxígeno y del cianuro hasta la superficie del oro, por eso se mantiene aire y agitación constantes.', r:'4 Au + 8 CN⁻ + O₂ + 2 H₂O → 4 Au(CN)₂⁻ + 4 OH⁻', v:[['NaCN','1,0–1,5 g/L'],['Tiempo de residencia','24–30 h'],['Oxígeno disuelto','≥ 6 mg/L'],['Aire','45 m³/h (diseño 67 m³/h)'],['Tanques','5 × 49,8 m³ útiles'],['Consumo de NaCN','0,50 kg/t']], o:'Disolver alrededor del 90 % del oro.'},
+      {no:'9', n:'Separación sólido-líquido', e:'Filtro prensa', x:'Separa el líquido con oro disuelto (solución rica) de la arena sin valor. El agua de lavado arrastra el oro que queda retenido en la torta.', v:[['Salidas','Solución rica y sólidos lavados']], o:'Enviar la solución rica a las columnas de carbón activado.'}
     ]},
     {title:'Recuperación del oro', stages:[
-      {no:'10', n:'Clarificación', e:'Filtro clarificador', x:'Retira las partículas finas que aún flotan en la solución, porque ensucian el zinc de la etapa siguiente y causan pérdidas de oro.', v:[['Turbidez','< 5 NTU']], o:'Solución limpia para precipitar el oro.'},
-      {no:'11', n:'Merrill-Crowe', e:'Torre de vacío, polvo de zinc y filtro', x:'Primero se retira el aire de la solución; luego el polvo de zinc devuelve el oro a estado sólido como un polvo oscuro. La solución sin oro regresa a la cianuración para reutilizar el cianuro.', r:'2 Au(CN)₂⁻ + Zn → 2 Au + Zn(CN)₄²⁻', v:[['Oxígeno disuelto','< 0,5 mg/L'],['Solución recirculada','0,48 m³/h con 0,80 kg/m³ de NaCN']], o:'Obtener un precipitado de oro.'},
+      {no:'10', n:'Adsorción en carbón activado', e:'Columnas de carbón activado', x:'La solución rica pasa por columnas con carbón activado, que retiene el oro disuelto como Au(CN)₂⁻. La solución que sale sin oro (solución pobre) regresa a la cianuración para reutilizar el cianuro. El carbón se cobra en Economía dentro de los US$ 8/t de relaves y carbón.', v:[['Carga de oro en el carbón','Debe medirse con ensayos'],['Solución recirculada','7,1 % del agua del proceso']], o:'Retener el oro de la solución en el carbón.'},
+      {no:'11', n:'Elución y electrodeposición', e:'Columna de elución y celda electrolítica', x:'Una solución caliente de NaCN y NaOH despega el oro del carbón; en la celda electrolítica el oro se deposita como metal sobre los cátodos. El carbón se reactiva y vuelve a las columnas. Es el mismo esquema de recuperación que la ruta de tiourea.', r:'Au(CN)₂⁻ + e⁻ → Au + 2 CN⁻', v:[['Elución','Solución caliente de NaCN y NaOH'],['Recuperación final','Electrodeposición']], o:'Obtener el oro metálico para fundirlo.'},
       {no:'12', n:'Fundición', e:'Horno de crisol', x:'El precipitado se funde con bórax y otros fundentes. El oro líquido se vierte en moldes y las impurezas quedan en una capa aparte (escoria).', v:[['Temperatura','1 150–1 200 °C']], o:'Lingote doré para la refinería.'}
     ]},
     {title:'Manejo de residuos y agua', stages:[
@@ -1152,14 +1160,14 @@ const FLOWS = {
   tu: [
     {title:'Conminución y clasificación', stages: COMMIN},
     {title:'Preparación y lixiviación ácida', stages:[
-      {no:'6', n:'Flotación de sulfuros', e:'Celdas de flotación', opt:true, x:'Concentra la pirita, que lleva la mayor parte del oro, para lixiviar menos masa. La tiourea se consume en grandes cantidades, así que reducir la masa tratada reduce el costo.', v:[['Recuperación de oro al concentrado','Debe determinarse por ensayo']], o:'Menor consumo total de tiourea.'},
+      {no:'6', n:'Flotación de sulfuros', e:'Celdas de flotación', opt:true, nc:'No se cobra en Economía: el simulador lixivia todo el mineral (sin flotación). Su recuperación al concentrado, sus equipos y sus reactivos deben definirse con ensayos.', x:'Concentra la pirita, que lleva la mayor parte del oro, para lixiviar menos masa. La tiourea se consume en grandes cantidades, así que reducir la masa tratada reduce el costo.', v:[['Recuperación de oro al concentrado','Debe determinarse por ensayo']], o:'Menor consumo total de tiourea.'},
       {no:'7', n:'Acondicionamiento ácido', e:'Tanque agitado con revestimiento resistente al ácido', x:'Se agrega ácido sulfúrico para llevar la pulpa a pH ácido y sulfato férrico como oxidante. El oxígeno del aire no basta para disolver el oro con tiourea. Por encima de pH 3 el hierro precipita y la tiourea se descompone más rápido.', v:[['pH','1,4–1,8'],['Relación molar Fe³⁺/tiourea','0,5'],['Potencial redox','≈ 510 mV']], o:'Medio ácido y oxidante estable.'},
       {no:'8', n:'Lixiviación con tiourea', e:'Tanques agitados', x:'La tiourea y el hierro férrico disuelven el oro mucho más rápido que el cianuro. A cambio, la tiourea se oxida y se pierde con facilidad, por lo que su consumo por tonelada es alto.', r:'2 Au + 4 CS(NH₂)₂ + 2 Fe³⁺ → 2 Au(CS(NH₂)₂)₂⁺ + 2 Fe²⁺', v:[['Tiourea','2–6 g/L'],['Tiempo de residencia','≈ 10 h'],['Consumo medido en Santander','23 kg/t'],['Consumo en sistemas optimizados','1–4 kg/t']], o:'Disolver rápidamente el oro asociado a sulfuros.'},
       {no:'9', n:'Separación sólido-líquido', e:'Filtro prensa', x:'Separa la solución rica de los sólidos. El agua de lavado se acidifica para que el hierro no precipite.', v:[['Agua de lavado','Acidificada']], o:'Solución rica para recuperar el oro.'}
     ]},
     {title:'Recuperación del oro y regeneración', stages:[
       {no:'10', n:'Recuperación del oro', e:'Columnas de carbón activado y celda de electrodeposición', x:'El oro disuelto se adsorbe en carbón activado; luego se separa del carbón con una solución de elución y se deposita como metal en una celda electrolítica. Este esquema se ha aplicado en laboratorio a soluciones de tiourea (UNAM; UNI, Perú); su eficiencia con este mineral debe confirmarse con ensayos.', v:[['Adsorción','Carbón activado'],['Elución','Alcohol isopropílico'],['Recuperación final','Electrodeposición']], o:'Obtener el oro en estado metálico para fundirlo.'},
-      {no:'11', n:'Regeneración de tiourea', e:'Dosificación de SO₂ o bisulfito', x:'Parte de la tiourea se oxida a disulfuro de formamidina. Agregar SO₂ la devuelve a tiourea antes de que se degrade de forma irreversible, y la solución se recircula.', r:'(NH₂)(NH)CSSC(NH)(NH₂) + SO₂ + 2 H₂O → 2 CS(NH₂)₂ + SO₄²⁻ + 2 H⁺', v:[['Reactivo','SO₂ o bisulfito de sodio']], o:'Reducir el consumo neto de tiourea.'},
+      {no:'11', n:'Regeneración de tiourea', e:'Dosificación de SO₂ o bisulfito', nc:'No se cobra en Economía: el SO₂ o bisulfito no tiene costo y el consumo de tiourea de la simulación no descuenta la regeneración. La solución sí se recircula (7,1 % del agua).', x:'Parte de la tiourea se oxida a disulfuro de formamidina. Agregar SO₂ la devuelve a tiourea antes de que se degrade de forma irreversible, y la solución se recircula.', r:'(NH₂)(NH)CSSC(NH)(NH₂) + SO₂ + 2 H₂O → 2 CS(NH₂)₂ + SO₄²⁻ + 2 H⁺', v:[['Reactivo','SO₂ o bisulfito de sodio']], o:'Reducir el consumo neto de tiourea.'},
       {no:'12', n:'Fundición', e:'Horno de crisol', x:'El producto de oro se funde con fundentes para obtener el lingote, igual que en la cianuración.', v:[['Temperatura','1 150–1 200 °C']], o:'Lingote doré.'}
     ]},
     {title:'Manejo de residuos y agua', stages:[
@@ -1177,11 +1185,11 @@ const FLOWS = {
   FLOWS.tu[2].stages = [sec[0], fund, regen];
 })();
 const SHORT = {
-  cn:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Flotación u oxidación',7:'Tanque agitado TK-701',8:'Tanques TK-801 a 805',9:'Filtro prensa',10:'Filtro clarificador',11:'Vacío y polvo de zinc',12:'Horno de crisol',13:'Reactor agitado',14:'Filtro y depósito HDPE'},
+  cn:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Flotación u oxidación',7:'Tanque agitado TK-701',8:'Tanques TK-801 a 805',9:'Filtro prensa',10:'Columnas de carbón',11:'Elución y celda',12:'Horno de crisol',13:'Reactor agitado',14:'Filtro y depósito HDPE'},
   tu:{1:'Tolva de gruesos',2:'Trituradora de mandíbulas',3:'Cono y criba',4:'Molino de bolas',5:'Hidrociclones',6:'Celdas de flotación',7:'Tanque revestido',8:'Tanques agitados',9:'Filtro prensa',10:'Carbón y electrodeposición',11:'Horno de crisol',12:'Dosificación de SO₂',13:'Reactor con cal',14:'Filtro y depósito HDPE'}
 };
 const ICON_OF = {
-  cn:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'clarifier',11:'column',12:'furnace',13:'reactor',14:'press'},
+  cn:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'column',11:'carbon',12:'furnace',13:'reactor',14:'press'},
   tu:{1:'hopper',2:'jaw',3:'cone',4:'mill',5:'cyclone',6:'cell',7:'tank',8:'tanks',9:'press',10:'carbon',11:'furnace',12:'dosing',13:'reactor',14:'press'}
 };
 // íconos lineales en una caja de 64 × 64
@@ -1217,10 +1225,10 @@ const POS = {
 function wrap(t, n){ const w=t.split(' '), L=['']; for (const x of w){ if ((L[L.length-1]+' '+x).trim().length>n && L[L.length-1]) L.push(x); else L[L.length-1]=(L[L.length-1]+' '+x).trim(); } return L; }
 function flowValues(route){
   const P = params(route), s = simulate(route, P), Ms = s.Ms;
-  const v = {1:`${f(Ms,2)} t/h · ≤ 200 mm`,2:`${f(Ms,2)} t/h → 35 mm`,3:`${f(Ms,2)} t/h → ≤ 12 mm`,4:`+ ${f(s.water,2)} m³/h de agua`,5:`${f(s.Q,2)} m³/h de pulpa`,
+  const v = {1:`${f(Ms,2)} t/h · ≤ 200 mm`,2:`${f(Ms,2)} t/h → 35 mm`,3:`${f(Ms,2)} t/h → ≤ 12 mm`,4:`P₈₀ ${f(P.p80,0)} µm`,5:`${f(P.sol,0)} % sólidos · ${f(s.Q,1)} m³/h`,
     9:`${f(s.water,2)} m³/h de solución`,13:`${f(Ms+s.water,2)} t/h de pulpa`,14:`${f(Ms,2)} t/h de sólidos`};
-  if (route==='cn'){ Object.assign(v,{6:'Solo si los ensayos lo exigen',7:`Cal ${f(Ms*1.0,2)} kg/h`,8:`NaCN ${f(s.cons*Ms,2)} kg/h`,10:'Turbidez < 5 NTU',11:'Oxígeno disuelto < 0,5 mg/L',12:'1 150–1 200 °C'}); }
-  else { Object.assign(v,{6:'Concentra la pirita',7:`pH 1,5 · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:'Carbón → electrodeposición',11:'1 150–1 200 °C',12:'Recircula la solución'}); }
+  if (route==='cn'){ Object.assign(v,{6:'Solo si los ensayos lo exigen',7:`Cal ${f(Ms*1.0,2)} kg/h`,8:`NaCN ${f(s.cons*Ms,2)} kg/h`,10:`Recircula ${f(FIXED.recycle*s.water,2)} m³/h`,11:'Electrodeposición',12:'1 150–1 200 °C'}); }
+  else { Object.assign(v,{6:'No incluida en el costo',7:`pH 1,5 · Fe³⁺/Tu 0,5`,8:`Tiourea ${f(s.cons*Ms,1)} kg/h`,10:'Carbón y electrodeposición',11:'1 150–1 200 °C',12:`Recircula ${f(FIXED.recycle*s.water,2)} m³/h`}); }
   return {v, s, P};
 }
 function flowSVG(route){
@@ -1243,7 +1251,7 @@ function flowSVG(route){
   E([Rp(9),[1372,Rp(9)[1]],[1372,lane(2,36)],[T(13)[0],lane(2,36)],T(13)],'main','sólidos lavados',[route==='cn'?FX(3)+100:FX(1)+60,lane(2,28)]);
   if (route==='cn'){
     E([Rp(10),Lp(11)],'main'); E([Rp(11),Lp(12)],'main');
-    E([T(11).map((x,i)=> i?x:x+40),[T(11)[0]+40,lane(1,76)],[B(8)[0],lane(1,76)],B(8)],'rec','solución sin oro (E)',[FX(1)+150,lane(1,92)]);
+    E([T(11).map((x,i)=> i?x:x+40),[T(11)[0]+40,lane(1,76)],[B(8)[0],lane(1,76)],B(8)],'rec','solución pobre',[FX(1)+150,lane(1,92)]);
   } else {
     E([Rp(10),Lp(11)],'main');
     E([[B(10)[0]+50,B(10)[1]],[B(10)[0]+50,lane(2,16)],[B(12)[0],lane(2,16)],B(12)],'main','solución pobre',[FX(2)+100,lane(2,9)]);
@@ -1272,11 +1280,12 @@ function flowSVG(route){
     const n = node(no), st = flatStages(route)[no], sel = openStage===`${route}-${no}`;
     const nm = wrap(st.n, 20), eq = SHORT[route][no];
     svg += `<g class="fnode" data-no="${no}" tabindex="0" role="button" aria-label="${st.n}: ver detalle">
-      <rect x="${n.x}" y="${n.y}" width="${NW}" height="${NH}" rx="18" fill="${sel?'#FBEFD9':'#F7F7F5'}" stroke="${sel?'#E0A448':'#D7D6D1'}" stroke-width="${sel?3:1.5}" ${st.opt?'stroke-dasharray="6 5"':''}/>
+      <rect x="${n.x}" y="${n.y}" width="${NW}" height="${NH}" rx="18" fill="${sel?'#FBEFD9':'#F7F7F5'}" stroke="${sel?'#E0A448':'#D7D6D1'}" stroke-width="${sel?3:1.5}" ${(st.opt||st.nc)?'stroke-dasharray="6 5"':''}/>
       <g transform="translate(${n.x+16},${n.y+14}) scale(0.9)">${icon(ICON_OF[route][no])}</g>
       <circle cx="${n.x+NW-26}" cy="${n.y+26}" r="15" fill="none" stroke="#1F1F1D" stroke-width="1.5"/>
       <text x="${n.x+NW-26}" y="${n.y+31}" text-anchor="middle" font-size="14" font-weight="600" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">${no}</text>
       ${st.opt?`<text x="${n.x+NW-26}" y="${n.y+60}" text-anchor="middle" font-size="12" font-family="Manrope, sans-serif" fill="#6E6D68">opcional</text>`:''}
+      ${st.nc?`<text x="${n.x+NW-26}" y="${n.y+(st.opt?76:60)}" text-anchor="middle" font-size="12" font-family="Manrope, sans-serif" fill="#B5482C">sin costo</text>`:''}
       ${nm.map((l,i)=>`<text x="${n.x+16}" y="${n.y+92+i*19}" font-size="16.5" font-weight="600" font-family="Instrument Sans, sans-serif" fill="#1F1F1D">${l}</text>`).join('')}
       <text x="${n.x+16}" y="${n.y+92+nm.length*19+2}" font-size="13.5" font-family="Manrope, sans-serif" fill="#6E6D68">${eq}</text>
       <text x="${n.x+16}" y="${n.y+NH-14}" font-size="13.5" font-weight="700" font-family="Manrope, sans-serif" fill="${route==='cn'?'#0072B2':'#D55E00'}">${v[no]||''}</text>
@@ -1294,6 +1303,12 @@ function stageVars(r, st){
   const v = st.v.map(x=>x.slice()), {s, P} = flowValues(r);
   const set = (k, val) => { const i = v.findIndex(x=>x[0]===k); if (i>=0) v[i][1] = val; else v.push([k, val]); };
   if (st.no==='1') set('Alimentación', `${f(S.feed,0)} t/d (${f(s.Ms,2)} t/h)`);
+  if (st.no==='4'){ set('Finura P₈₀', `${f(P.p80,0)} µm`); set('Agua', `${f(s.water,2)} m³/h (agua de proceso recirculada)`); set('Energía', `${f(s.grindKWh,1)} kWh/t (Bond) + ${f(AUX_KWH,1)} kWh/t de auxiliares`); }
+  if (st.no==='5'){ set('Sólidos en la pulpa', `${f(P.sol,1)} % en masa`); set('Finura del producto', `P₈₀ = ${f(P.p80,0)} µm`); set('Pulpa', `${f(s.Q,2)} m³/h`); }
+  if (st.no==='7' && r==='cn'){ const Vu = 8.5*S.feed/80, D = Math.cbrt(4*Vu/(Math.PI*FILL));        // tanque del documento (80 t/d), escalado con las t/d
+    set('pH', `${f(P.pH,2)}`); set('Cal (CaO)', `1,0 kg/t (${f(s.Ms,2)} kg/h)`); set('Tanque', `Ø ${f(D,2)} × ${f(D,2)} m · ${f(Vu,1)} m³ útiles`); set('Tiempo de residencia', `≈ ${f(Vu/s.Q,2)} h`); }
+  if (st.no==='7' && r==='tu') set('Sulfato férrico', `${f(DOSES.ferric*P.C/FERRIC_REF_C,2)} kg/t (escala con la tiourea)`);
+  if (r==='cn' && st.no==='10') set('Solución recirculada', `${f(FIXED.recycle*s.water,2)} m³/h (7,1 % del agua)`);
   if (st.no==='8' && r==='cn'){ set('NaCN', `${f(P.C,2)} g/L`); set('Tiempo de residencia', `${f(s.tau,1)} h`); set('Oxígeno disuelto', `${f(s.hab.o2mg,1)} mg/L`);
     set('Aire', `${f(45*s.Ms/(80/24),1)} m³/h`); set('Tanques', `${s.N} × ${f(s.Vt,1)} m³ útiles`); set('Consumo de NaCN', `${f(s.cons,2)} kg/t`); set('Recuperación', `${f(s.R*100,1)} %`); }
   if (st.no==='8' && r==='tu'){ set('Tiourea', `${f(P.C,1)} g/L`); set('Tiempo de residencia', `${f(s.tau,1)} h`); set('Tanques', `${s.N} × ${f(s.Vt,1)} m³ útiles`); set('Consumo calculado', `${f(s.cons,1)} kg/t`); set('Recuperación', `${f(s.R*100,1)} %`); }
@@ -1312,7 +1327,7 @@ function renderFlow(){
     <div class="kpi"><div class="v">${f(s.Q,2)}</div><div class="l">m³/h de pulpa</div></div>
     <div class="kpi"><div class="v">${f(s.water,2)}</div><div class="l">m³/h de agua</div></div>
     <div class="kpi"><div class="v">${f(s.LS,2)}</div><div class="l">m³ de agua por t de mineral</div></div>`;
-  el.innerHTML = `<div class="flow-legend"><span><i class="lg-main"></i>Flujo principal</span><span><i class="lg-rec"></i>Retorno o recirculación</span><span><i class="lg-opt"></i>Etapa opcional</span><span class="small">Pulsa un equipo para ver su detalle.</span></div>
+  el.innerHTML = `<div class="flow-legend"><span><i class="lg-main"></i>Flujo principal</span><span><i class="lg-rec"></i>Retorno o recirculación</span><span><i class="lg-opt"></i>Opcional o sin costo en Economía</span><span class="small">Pulsa un equipo para ver su detalle.</span></div>
     <div class="flow-wrap">${flowSVG(r)}</div>`;
   renderStageModal(r);
   el.querySelectorAll('.fnode').forEach(g=>{
@@ -1335,6 +1350,7 @@ function renderStageModal(r){
     ${st.r?`<div class="k">Reacción</div><div class="rxn">${st.r}</div>`:''}
     <div class="k">Variables controladas</div><dl class="vars">${stageVars(r, st).map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>
     <div class="k">Objetivo</div><p>${st.o}</p>
+    ${st.nc?`<div class="k">Costo en Economía</div><p>${st.nc}</p>`:''}
   </div>`;
   m.hidden = false; document.body.classList.add('modal-open');
   m.querySelector('.modal-x').addEventListener('click', closeStage);
@@ -1383,7 +1399,10 @@ function alertsFor(route, P, s){
     if (s.hab.o2mg > s.o2sat + 0.05) A.push(['warn','Oxígeno sobre la saturación', `Con aire la pulpa solo alcanza ${f(s.o2sat,1)} mg/L a ${f(s.T,1)} °C y ${f(P.alt,0)} m. Para ${f(s.hab.o2mg,1)} mg/L hay que inyectar oxígeno puro, que no está costeado.`]);
     else if (s.hab.o2mg < 6) A.push(['warn','Poco oxígeno disuelto', 'Por debajo de 6 mg/L (mínimo de diseño) la disolución se frena: con cianuro de sobra, la velocidad es proporcional al oxígeno.']);
     A.push(['info', `Limita ${s.hab.limit==='O2'?'el oxígeno':'el cianuro'}`, s.hab.limit==='O2' ? `Hay ${f(s.hab.ratio,0)} moléculas de CN⁻ por cada O₂ (óptimo ≈ 6): subir el NaCN casi no acelera la disolución.` : `Hay ${f(s.hab.ratio,1)} moléculas de CN⁻ por cada O₂ (óptimo ≈ 6): subir el NaCN acelera la disolución.`]);
-  } else if (s.cons > 4) A.push(['info','Consumo alto de tiourea', `${f(s.cons,1)} kg/t: supera los 1–4 kg/t de sistemas optimizados; en mineral de Santander se midieron 23 kg/t.`]);
+  } else {
+    if (s.Rraw > s.cap + 1e-6) A.push(['info','Tope industrial de la tiourea', `La cinética de laboratorio daría ${f(s.Rraw*100,1)} %; en todas las pestañas se usa el tope industrial de ${f(s.cap*100,0)} % (se cambia en Economía, «Supuestos de operación»).`]);
+    if (s.cons > 4) A.push(['info','Consumo alto de tiourea', `${f(s.cons,1)} kg/t: supera los 1–4 kg/t de sistemas optimizados; en mineral de Santander se midieron 23 kg/t.`]);
+  }
   if (P.dT > 0.05){ const day = s.heatKW*24*heatCostPerKWh(ecoParams());
     A.push(['info','Pulpa calentada', `Subir ${f(P.dT,1)} °C exige ${f(s.heatKW,1)} kW continuos (${f(s.heatLoad.feed,1)} kW para calentar lo que entra y ${f(s.heatKW-s.heatLoad.feed,1)} kW de pérdidas de los tanques): unos ${money(day)} por día, que se cobran en Economía.`]); }
   return A;
@@ -1405,7 +1424,7 @@ function renderSim(){
     const P = params(route), s = simulate(route, P), req = tauFor(route, P, TARGET);
     const consMax = route==='cn' ? Math.max(2, s.cons*1.3) : Math.max(30, s.cons*1.2);
     document.getElementById(route+'-out').innerHTML =
-      gaugeHTML('Recuperación de oro', s.R*100, '%', 1, 100, null, `Máximo lixiviable: ${f(s.Rinf*100,0)} %`) +
+      gaugeHTML('Recuperación de oro', s.R*100, '%', 1, 100, null, route==='tu' ? `Tope industrial: ${f(s.cap*100,0)} % · máximo lixiviable: ${f(s.Rinf*100,0)} %` : `Máximo lixiviable: ${f(s.Rinf*100,0)} %`) +
       gaugeHTML(route==='cn'?'Consumo de NaCN':'Consumo de tiourea', s.cons, 'kg/t', 2, consMax, route==='cn'?[0.5,0.5]:[1,4], route==='cn'?'Diseño base: 0,50 kg/t':'Franja: 1–4 kg/t en sistemas optimizados') +
       `<div class="kpis">
         <div class="kpi"><div class="v">${f(s.AuGd,0)}</div><div class="l">g/d de oro recuperado</div></div>
@@ -1594,7 +1613,7 @@ const ECO_SPEC = {
   life:{lab:'Vida útil del proyecto', u:'años', s:'Años de operación, después de la construcción (1 a 30)'},
   build:{lab:'Construcción', u:'meses', s:'La inversión se paga en cuotas iguales y no hay producción. El mes siguiente es el arranque: 50 % de capacidad y se cobra el 50 % del oro (el resto queda en proceso hasta el cierre)'},
   wcMonths:{lab:'Capital de trabajo', u:'meses de costos', s:'Compra de mineral y costos de operación a plena capacidad; se suma a la inversión y se recupera al cierre'},
-  tuCap:{lab:'Recuperación industrial de la tiourea', u:'%', s:'Tope sin calentamiento, para comparar en igualdad con la cianuración. Si la simulación da menos, se usa ese valor'},
+  tuCap:{lab:'Recuperación industrial de la tiourea', u:'%', s:'Tope sin calentamiento, para comparar en igualdad con la cianuración. Se aplica en todas las pestañas (Cinética, Simulación, Rutas y Economía); si la cinética da menos, se usa ese valor'},
   grind:{lab:'Medios de molienda', u:'US$/t', s:'Bolas y revestimientos'},
   tail:{lab:'Relaves y carbón activado', u:'US$/t', s:'Manejo de relaves y reposición de carbón'},
   disc:{lab:'Descuento comercial', u:'% del precio', s:'Refinación y transporte del oro'}
@@ -1646,7 +1665,7 @@ function renderEco(){
     sec('1. Producción a plena capacidad (por mes)'),
     ['Mineral procesado', a.tyr/12, b.tyr/12, x=>f(x,1)+' t'],
     ['Oro que trae el mineral', a.ozFeed/12, b.ozFeed/12, x=>f(x,2)+' oz'],
-    ['Recuperación usada en Economía', a.R*100, b.R*100, x=>f(x,1)+' %'],
+    ['Recuperación (la misma en todas las pestañas)', a.R*100, b.R*100, x=>f(x,1)+' %'],
     ['Oro producido', a.oz/12, b.oz/12, x=>f(x,2)+' oz'],
     ['Venta del oro (precio × onzas)', (a.revenue+a.discount)/12, (b.revenue+b.discount)/12, money],
     [`− Descuento comercial (${f(E.disc*100,1)} %)`, a.discount/12, b.discount/12, x=>money(-x)],
@@ -1668,12 +1687,14 @@ function renderEco(){
     sec('4. Costos a plena capacidad (por mes)'),
     [own ? 'Extracción en la mina' : 'Compra del mineral a mineros', a.ore/12, b.ore/12, money],
     ['Reactivos', a.reagents/12, b.reagents/12, money],
-    ['Energía: molienda, agitación y bombeo', a.energy/12, b.energy/12, money],
+    ['Energía: molienda, agitación, bombeo y auxiliares (4 kWh/t)', a.energy/12, b.energy/12, money],
     ['Calentamiento de la pulpa', a.heat/12, b.heat/12, money],
     ['Medios de molienda', a.grindMedia/12, b.grindMedia/12, money],
     ['Relaves y carbón activado', a.tailings/12, b.tailings/12, money],
     ['Tratamiento de residuos', a.waste/12, b.waste/12, money],
-    ['Personal, mantenimiento y laboratorio', a.staff/12, b.staff/12, money],
+    ['Personal (escala con (t/d ÷ 20)^0,35)', a.personnel/12, b.personnel/12, money],
+    ['Mantenimiento: 4 % del CAPEX de la planta', a.maint/12, b.maint/12, money],
+    ['Laboratorio', (a.staff-a.personnel-a.maint)/12, (b.staff-b.personnel-b.maint)/12, money],
     ['4×1000 sobre los pagos', a.gmf/12, b.gmf/12, money],
     ['Costo mensual total', a.opex/12, b.opex/12, money, true],
     sec('5. Obligaciones de ley'),
@@ -1809,12 +1830,12 @@ function renderSources(){
       'Ray, ecs. 4.10 y 4.23. Carter–Valensi (ec. 4.35) se usa con Z = 1,5. α es la fracción del oro lixiviable ya disuelta.'],
     ['Constante de velocidad', String.raw`\[ k=k_{ref}\,\frac{F}{F_{ref}}\left(\frac{P_{80,ref}}{P_{80}}\right)^{2} \]`,
       'k<sub>ref</sub> se ajusta a un dato medido: cianuración 90 % en 30 h con 5 tanques (diseño) o 46 % en 35 h (mineral de California); tiourea 96 % en 10 h. F es la velocidad de Habashi o C·exp(…) en las condiciones elegidas.'],
-    ['Recuperación en tanques en serie', String.raw`\[ R=R_\infty\int_0^\infty \alpha(kt)\,\frac{N^{N}t^{N-1}e^{-Nt/\tau}}{\tau^{N}(N-1)!}\,dt \]`,
-      'En tanques agitados no toda la pulpa permanece lo mismo; la distribución gamma da la fracción que sale a cada tiempo. A la salida del tanque i se usa i tanques y τ·i/N.'],
+    ['Recuperación en tanques en serie', String.raw`\[ R=\min\!\left(R_\infty\int_0^\infty \alpha(kt)\,\frac{N^{N}t^{N-1}e^{-Nt/\tau}}{\tau^{N}(N-1)!}\,dt\;,\;R_{tope}\right) \]`,
+      'En tanques agitados no toda la pulpa permanece lo mismo; la distribución gamma da la fracción que sale a cada tiempo. A la salida del tanque i se usa i tanques y τ·i/N. En tiourea R<sub>tope</sub> = 85 % (tope industrial, editable en Economía) y se aplica en todas las pestañas; en cianuración no hay tope.'],
     ['Consumo de reactivo', String.raw`\[ \text{NaCN}=\frac{2\cdot 49{,}01}{196{,}97}\,\frac{\text{ley}\,R}{1000}+k_d\,C\,\frac{L}{S}\,\tau \qquad \text{Tiourea}=a\,C^{1{,}37}\,\frac{L}{S}\,\tau \]`,
-      'kg/t. k<sub>d</sub> = 0,00816 h⁻¹ (diseño) o 0,1469 h⁻¹ (California); a = 0,0847, ajustado a 23 kg/t en 10 h con 6 g/L (Carrillo et al.).'],
-    ['Energía de molienda', String.raw`\[ W=10\,W_i\left(\frac{1}{\sqrt{P_{80}}}-\frac{1}{\sqrt{F_{80}}}\right) \]`,
-      'Ley de Bond con W<sub>i</sub> = 15 kWh/t (valor típico, sin ensayo para el distrito) y F<sub>80</sub> = 10 mm.'],
+      'kg/t. k<sub>d</sub> = 0,00816 h⁻¹ (diseño) o 0,1469 h⁻¹ (California); a = 0,0847, ajustado a 23 kg/t en 10 h con 6 g/L (Carrillo et al.). Sulfato férrico = 2 kg/t · C / 6 (Fe³⁺/tiourea = 0,5 constante).'],
+    ['Energía de molienda', String.raw`\[ W=10\,W_i\left(\frac{1}{\sqrt{P_{80}}}-\frac{1}{\sqrt{F_{80}}}\right)+4{,}0 \]`,
+      'Ley de Bond con W<sub>i</sub> = 15 kWh/t (valor típico, sin ensayo para el distrito) y F<sub>80</sub> = 10 mm. Los 4,0 kWh/t adicionales cubren trituración, bandas transportadoras, filtros y fundición.'],
     ['Calentamiento de la pulpa', String.raw`\[ \dot Q=(\dot m_s c_{p,s}+\dot m_w c_{p,w})\,\Delta T+A_{sup}\,q_{sup}(\Delta T)+A_{pared}\,q_{pared}(\Delta T)+\dot m_{aire}\,\Delta x\,h_{fg} \]`,
       'Calor para la pulpa que entra (c<sub>p</sub> 0,8 y 4,186 kJ/kg·°C) más las pérdidas de los tanques abiertos: q<sub>sup</sub> y q<sub>pared</sub> según las tablas de Engineering ToolBox para superficie de agua y acero sin aislar en aire quieto, y el vapor que arrastra el aire de la cianuración. Electricidad al 100 % o caldera de ACPM al 80 % (35,8 MJ/L).'],
     ['Inversión', String.raw`\[ I=C_{circuito}\left(\frac{V}{V_{ref}}\right)^{0{,}6}+C_{DNP}\left(\frac{\text{t/d}}{40}\right)^{0{,}6}\;(+\ \text{mina}) \]`,
