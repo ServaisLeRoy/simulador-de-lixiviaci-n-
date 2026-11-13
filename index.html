@@ -1842,11 +1842,9 @@ function renderZoneModal(){
     </div>
     <p style="margin-top:12px">A esta altura el agua de la pulpa toma ${f(100*(1-o2/o2sea),0)} % menos oxígeno que al nivel del mar. ${colder} En la cianuración el oxígeno es el que limita la velocidad.</p>
     <p class="small" style="margin-top:14px">${z.src} El oxígeno se calcula con la solubilidad del oxígeno del aire en agua (Marsden, Tabla 6.4) corregida por la presión a esa altitud.</p>
-    <button class="btn fill" type="button" id="zone-use" style="margin-top:18px">${S.zone===z.id?'Esta zona ya está en uso':'Usar estas condiciones en la simulación'}</button>
   </div>`;
   m.hidden = false; document.body.classList.add('modal-open');
   m.querySelector('.modal-x').addEventListener('click', closeZone);
-  m.querySelector('#zone-use').addEventListener('click', ()=>{ applyZone(z.id); closeZone(); });
   m.querySelector('.modal-x').focus();
 }
 document.getElementById('zone-modal').addEventListener('click', e=>{ if (e.target.id==='zone-modal') closeZone(); });
