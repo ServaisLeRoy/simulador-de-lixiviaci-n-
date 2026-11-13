@@ -719,6 +719,31 @@ const PRICES = { lime:390, acid:300, ferric:350, smbs:500 };              // US$
 const DOSES = { lime:1.0, acid:15, ferric:2 };                            // kg/t
 const FIXED = { personnel:240651, lab:20000, maint:0.04, recycle:0.071 }; // documento, Tabla 9
 
+// ---------- calor: pérdidas de tanques abiertos ----------
+// Engineering ToolBox, «Heat Loss from Open Water Tanks»: aire quieto a 15,6 °C; Btu/ft²·h × 3,1525 = W/m².
+// Se usa con la diferencia entre la pulpa y el ambiente (el tanque sin calentar no pierde calor por calentar).
+const _F = F => (F-32)*5/9 - 15.6;
+const LOSS_SURF = [[60,0],[90,130],[100,230],[110,330],[120,470],[130,615],[140,820],[150,1040],[160,1310],[170,1615],[180,2000]].map(([F,q])=>[_F(F), q*3.1525]);
+const LOSS_WALL = [[60,0],[90,50],[100,70],[110,90],[120,110],[130,135],[140,160],[150,180],[160,210],[170,235],[180,260]].map(([F,q])=>[_F(F), q*3.1525]);
+const DIESEL_KWH_GAL = 3.785*35.8/3.6;   // kWh por galón de ACPM (poder calorífico inferior ≈ 35,8 MJ/L)
+const BOILER_EFF = 0.80;                 // rendimiento típico de una caldera o calentador a ACPM
+function pws(T){ return 0.61094*Math.exp(17.625*T/(T+243.04)); }              // kPa, Magnus
+function heatLoad(route, P, pp){
+  const dT = P.dT; if (dT <= 0) return { feed:0, surf:0, wall:0, air:0, total:0 };
+  const feed = (pp.Ms*1000*0.8 + pp.water*1000*4.186)*dT/3600;                 // kW: calentar mineral y agua que entran
+  const As = P.N*Math.PI*P.D*P.D/4, Aw = P.N*Math.PI*P.D*P.H*0.9;               // m²: superficie libre y pared mojada
+  const surf = As*interp(LOSS_SURF, dT)/1000, wall = Aw*interp(LOSS_WALL, dT)/1000;
+  let air = 0;
+  if (route==='cn'){                                                             // el aire burbujeado sale saturado de vapor
+    const Patm = 101.325*Math.exp(-P.alt/8434), T = P.Tamb+dT;
+    const xs = t => 0.622*pws(t)/(Patm-pws(t));
+    const mAir = 45*(pp.Ms/(80/24))*Patm*1000/(287*(P.Tamb+273.15));            // kg/h (documento: 45 m³/h a 80 t/d)
+    air = mAir*((xs(T)-xs(P.Tamb))*2450 + 1.006*dT)/3600;
+  }
+  return { feed, surf, wall, air, total: feed+surf+wall+air };
+}
+function heatCostPerKWh(E){ return E.heatSource==='acpm' ? E.diesel/(DIESEL_KWH_GAL*BOILER_EFF) : E.elec/1000; }  // US$ por kWh útil
+
 // ---------- química ----------
 const O2_TABLE = [[0,14.5],[5,12.8],[10,11.3],[15,10.1],[20,9.1],[25,8.3],[30,7.5],[35,7.0],[40,6.5],[45,6.0],[50,5.6],[60,4.8],[70,3.9],[80,2.9],[90,1.7],[100,0]];
 function interp(tab, x){
@@ -827,7 +852,7 @@ function simulate(route, P, opt){
   const AuFeed = pp.Ms*P.ley;                                   // g/h
   return { route, T, R, Rinf:cal.Rinf, k, kref, tau, N:P.N, Vt, V:P.N*Vt, ...pp,
     cons: consOf(R, tau), AuFeed, AuGd: AuFeed*R*24, AuSol: AuFeed*R/pp.water, tails: P.ley*(1-R),
-    hab, o2sat, heatKW: (pp.Ms*1000*0.8 + pp.water*1000*4.186)*P.dT/3600,
+    hab, o2sat, heatLoad: heatLoad(route, P, pp), heatKW: heatLoad(route, P, pp).total,
     grindKWh: 10*WI*(1/Math.sqrt(P.p80) - 1/Math.sqrt(F80)), consOf };
 }
 // salida de cada tanque i: distribución gamma de i tanques con τ·i/N
@@ -854,7 +879,7 @@ function tauFor(route, P, targetPct){                    // horas de residencia 
 }
 
 // ---------- economía ----------
-// E = {price, source:'compra'|'propia', pay (fracción del oro contenido), mineCost (US$/t), capexMine, elec, pNaCN, pTu, rate, life}
+// E = {price, source:'compra'|'propia', pay, mineCost, capexMine, elec (US$/MWh), heatSource:'elec'|'acpm', diesel (US$/gal), pNaCN, pTu, rate, life}
 function economics(route, P, s, E){
   const tyr = P.feed*DAYS, ozFeed = tyr*P.ley/31.1035, oz = ozFeed*s.R;
   const revenue = oz*E.price, own = E.source==='propia';
@@ -872,7 +897,7 @@ function economics(route, P, s, E){
   const kWleach = (2.2*(s.Q/8) + 7.5*s.N*(s.Vt/49.8) + 3*(s.Q/8) + (route==='cn' ? 2.2*(s.Ms/(80/24)) : 0))*31.24/44.9;
   const energyLeach = kWleach*24*DAYS/1000*E.elec;
   const energyGrind = s.grindKWh*tyr/1000*E.elec;
-  const heat = s.heatKW*24*DAYS/1000*E.elec;
+  const heat = s.heatKW*24*DAYS*heatCostPerKWh(E);
   // reactivos y residuos
   let reagents, waste;
   if (route==='cn'){
@@ -919,7 +944,7 @@ function irrOf(flows){
 }
 function fmt(x, d=0){ if (x===null || x===undefined || !isFinite(x)) return '—'; return x.toLocaleString('es-CO',{minimumFractionDigits:d, maximumFractionDigits:d}); }
 
-if (typeof module !== 'undefined') module.exports = { simulate, economics, tankProfile, batchCurve, tauFor, krefOf, plantAlpha, alphaOf, gOf, o2Sat, fracCN, pulp, habashi, CAL, MODELS, LAW, PLANT_REF, DAYS };
+if (typeof module !== 'undefined') module.exports = { heatLoad, heatCostPerKWh, simulate, economics, tankProfile, batchCurve, tauFor, krefOf, plantAlpha, alphaOf, gOf, o2Sat, fracCN, pulp, habashi, CAL, MODELS, LAW, PLANT_REF, DAYS };
 
 </script>
 <script>
@@ -939,7 +964,7 @@ const DEF = {
   cn:{ pH:10.75, C:1.0, dT:0, N:5, D:2.5, H:2.75 },
   tu:{ C:6, dT:0, N:5, D:1.75, H:1.95 },
   tkRoute:'cn',
-  eco:{ price:4100, source:'compra', pay:50, mineCost:42, capexMine:0, elec:224, pNaCN:2500, pTu:2100, rate:10, life:10 }
+  eco:{ price:4100, source:'compra', pay:50, mineCost:42, capexMine:0, elec:257, heatSource:'elec', diesel:3.45, pNaCN:2500, pTu:2100, rate:10, life:10 }
 };
 const ZONES = [
   {id:'vetas', n:'Vetas', alt:3350, T:11, x:470, d:'Es el municipio más alto del distrito; cerca de tres cuartas partes de su territorio están en el páramo de Santurbán. Hay minería subterránea pequeña en sus vetas.', src:'Altitud: cabecera municipal (3.350 m). Temperatura media: 11 °C (Climate-Data.org); otras fuentes reportan 5–6 °C en las partes altas del páramo.'},
@@ -1025,7 +1050,7 @@ function params(route){
 }
 function ecoParams(){
   const e = S.eco;
-  return { price:e.price, source:e.source, pay:e.pay/100, mineCost:e.mineCost, capexMine:e.capexMine, elec:e.elec,
+  return { price:e.price, source:e.source, pay:e.pay/100, mineCost:e.mineCost, capexMine:e.capexMine, elec:e.elec, heatSource:e.heatSource, diesel:e.diesel,
     pNaCN:e.pNaCN, pTu:e.pTu, rate:e.rate/100, life:Math.max(1, Math.min(30, Math.round(e.life))) };
 }
 
@@ -1308,8 +1333,8 @@ function alertsFor(route, P, s){
     else if (s.hab.o2mg < 6) A.push(['warn','Poco oxígeno disuelto', 'Por debajo de 6 mg/L (mínimo de diseño) la disolución se frena: con cianuro de sobra, la velocidad es proporcional al oxígeno.']);
     A.push(['info', `Limita ${s.hab.limit==='O2'?'el oxígeno':'el cianuro'}`, s.hab.limit==='O2' ? `Hay ${f(s.hab.ratio,0)} moléculas de CN⁻ por cada O₂ (óptimo ≈ 6): subir el NaCN casi no acelera la disolución.` : `Hay ${f(s.hab.ratio,1)} moléculas de CN⁻ por cada O₂ (óptimo ≈ 6): subir el NaCN acelera la disolución.`]);
   } else if (s.cons > 4) A.push(['info','Consumo alto de tiourea', `${f(s.cons,1)} kg/t: supera los 1–4 kg/t de sistemas optimizados; en mineral de Santander se midieron 23 kg/t.`]);
-  if (P.dT > 0.05){ const day = s.heatKW*24/1000*S.eco.elec;
-    A.push(['info','Pulpa calentada', `Subir ${f(P.dT,1)} °C exige ${f(s.heatKW,1)} kW continuos: unos ${money(day)} por día de electricidad, que se cobran en Economía.`]); }
+  if (P.dT > 0.05){ const day = s.heatKW*24*heatCostPerKWh(ecoParams());
+    A.push(['info','Pulpa calentada', `Subir ${f(P.dT,1)} °C exige ${f(s.heatKW,1)} kW continuos (${f(s.heatLoad.feed,1)} kW para calentar lo que entra y ${f(s.heatKW-s.heatLoad.feed,1)} kW de pérdidas de los tanques): unos ${money(day)} por día, que se cobran en Economía.`]); }
   return A;
 }
 const alertHTML = A => `<div class="alerts">${A.map(([k,t,m])=>`<div class="alert ${k==='warn'?'':k}"><b>${t}</b>${m}</div>`).join('')}</div>`;
@@ -1510,7 +1535,8 @@ const ECO_SPEC = {
   pay:{lab:'Pago al minero por el oro del mineral', u:'% del oro contenido', s:'Lo que la planta paga por el oro que trae el mineral (lo recupere o no). En Segovia, Aris Mining obtuvo márgenes de 35–46 % sobre el oro comprado a mineros (2025–2026). La regalía la liquida el minero.', only:'compra'},
   mineCost:{lab:'Costo de extracción en la mina', u:'US$/t', s:'Soto Norte (estudio de 2025): 42 US$/t en una mina subterránea grande. Una mina pequeña suele costar más: ajústalo si lo conoces.', only:'propia'},
   capexMine:{lab:'Inversión en la mina', u:'US$', s:'Desarrollo, equipos y permisos. No hay dato verificable para minas pequeñas de la zona: escríbelo si lo conoces.', only:'propia'},
-  elec:{lab:'Energía eléctrica', u:'US$/MWh', s:'Agitación, bombeo, molienda y calentamiento'},
+  elec:{lab:'Energía eléctrica', u:'US$/MWh', s:'ESSA, tarifa comercial e industrial de enero de 2026: COP 846,47/kWh, a TRM 3.297 (12 nov 2026). Agitación, bombeo y molienda'},
+  diesel:{lab:'Precio del ACPM', u:'US$/galón', s:'Bucaramanga, noviembre de 2026: COP 11.364/galón, a TRM 3.297', only:'acpm', by:'heatSource'},
   pNaCN:{lab:'Precio del NaCN', u:'US$/t', s:''},
   pTu:{lab:'Precio de la tiourea', u:'US$/t', s:''},
   rate:{lab:'Tasa de descuento', u:'%', s:'Solo cambia el VAN y la recuperación descontada'},
@@ -1522,14 +1548,18 @@ function mountEco(){
   document.getElementById('eco-inputs').innerHTML = inp('price') + `<div class="inp"><label for="e-source">Origen del mineral</label>
     <select id="e-source" class="sel full"><option value="compra">La planta compra el mineral a mineros</option><option value="propia">Mina propia</option></select>
     <div class="s">Define qué paga la planta por cada tonelada y quién liquida la regalía.</div></div>` +
-    ['pay','mineCost','capexMine','elec','pNaCN','pTu','rate','life'].map(inp).join('');
+    ['pay','mineCost','capexMine','elec'].map(inp).join('') + `<div class="inp"><label for="e-heatSource">Calentamiento de la pulpa con</label>
+    <select id="e-heatSource" class="sel full"><option value="elec">Resistencias eléctricas (100 % de la energía llega a la pulpa)</option><option value="acpm">Caldera de ACPM (80 % de rendimiento)</option></select>
+    <div class="s">Solo importa si en Simulación o aquí subes la temperatura de la pulpa.</div></div>` + ['diesel','pNaCN','pTu','rate','life'].map(inp).join('');
   document.getElementById('e-source').value = S.eco.source;
   document.getElementById('e-source').addEventListener('change', e=>{ S.eco.source = e.target.value; syncEco(); schedule(); });
+  document.getElementById('e-heatSource').value = S.eco.heatSource;
+  document.getElementById('e-heatSource').addEventListener('change', e=>{ S.eco.heatSource = e.target.value; syncEco(); schedule(); });
   Object.keys(ECO_SPEC).forEach(k=> document.getElementById('e-'+k).addEventListener('input', e=>{ const v=parseFloat(e.target.value); if (isFinite(v) && v>=0){ S.eco[k]=v; schedule(); } }));
-  document.getElementById('eco-reset').addEventListener('click', ()=>{ S.eco = JSON.parse(JSON.stringify(DEF.eco)); Object.keys(ECO_SPEC).forEach(k=> document.getElementById('e-'+k).value = S.eco[k]); document.getElementById('e-source').value = S.eco.source; syncEco(); schedule(); });
+  document.getElementById('eco-reset').addEventListener('click', ()=>{ S.eco = JSON.parse(JSON.stringify(DEF.eco)); Object.keys(ECO_SPEC).forEach(k=> document.getElementById('e-'+k).value = S.eco[k]); document.getElementById('e-source').value = S.eco.source; document.getElementById('e-heatSource').value = S.eco.heatSource; syncEco(); schedule(); });
   syncEco();
 }
-function syncEco(){ document.querySelectorAll('#eco-inputs .inp[data-k]').forEach(el=>{ const o = ECO_SPEC[el.dataset.k]; el.hidden = !!o.only && o.only!==S.eco.source; }); }
+function syncEco(){ document.querySelectorAll('#eco-inputs .inp[data-k]').forEach(el=>{ const o = ECO_SPEC[el.dataset.k]; el.hidden = !!o.only && o.only!==S.eco[o.by||'source']; }); }
 function renderEco(){
   const E = ecoParams(), R = {};
   for (const route of ['cn','tu']){ const P = params(route), s = simulate(route,P); R[route] = {P, s, e: economics(route, P, s, E)}; }
@@ -1544,10 +1574,12 @@ function renderEco(){
   // calentamiento
   const z = zoneOf(S.zone);
   document.getElementById('eh-amb').textContent = `${z?z.n+' · ':''}temperatura ambiente ${f(S.Tamb,1)} °C`;
-  const hr = route => { const {P, s, e} = R[route], P0 = {...P, dT:0}, s0 = simulate(route, P0), e0 = economics(route, P0, s0, E);
-    return `<tr><td style="white-space:nowrap"><span class="dot" style="background:${COL[route]}"></span>${RNAME[route]}</td><td class="r">${f(P.dT,1)} °C · ${f(s.heatKW,1)} kW</td><td class="r"><b>${money(e.heat/DAYS)}</b></td><td class="r">${money(e.heat)}</td><td class="r">${f(s0.R*100,1)} → ${f(s.R*100,1)} %</td><td class="r">${kmoney(e0.npv)} → ${kmoney(e.npv)}</td></tr>`; };
-  document.getElementById('eco-heat').innerHTML = `<div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Sube · potencia</th><th class="r">Costo por día</th><th class="r">Costo al año</th><th class="r">Recuperación</th><th class="r">VAN</th></tr></thead><tbody>${hr('cn')}${hr('tu')}</tbody></table></div>
-    <p class="small" style="margin-top:8px">Energía para calentar el mineral y el agua que entran cada hora, ${DAYS} días al año, con electricidad a ${money(E.elec)}/MWh. Las flechas comparan sin calentar → calentando. No incluye pérdidas de calor de los tanques: es un costo mínimo.</p>`;
+  const ckwh = heatCostPerKWh(E), srcTxt = E.heatSource==='acpm' ? `caldera de ACPM a US$ ${f(E.diesel,2)}/galón (80 % de rendimiento)` : `resistencias eléctricas a ${money(E.elec)}/MWh`;
+  const hr = route => { const {P, s, e} = R[route], P0 = {...P, dT:0}, s0 = simulate(route, P0), e0 = economics(route, P0, s0, E), h = s.heatLoad;
+    const perDeg = P.dT > 0 ? e.heat/DAYS/P.dT : simulate(route, {...P, dT:1}).heatKW*24*ckwh;
+    return `<tr><td style="white-space:nowrap"><span class="dot" style="background:${COL[route]}"></span>${RNAME[route]}</td><td class="r">${f(P.dT,1)} °C</td><td class="r">${f(h.feed,1)} + ${f(h.total-h.feed,1)} = <b>${f(h.total,1)} kW</b></td><td class="r"><b>${money(e.heat/DAYS)}</b></td><td class="r">${money(perDeg)}</td><td class="r">${f(s0.R*100,1)} → ${f(s.R*100,1)} %</td><td class="r">${kmoney(e0.npv)} → ${kmoney(e.npv)}</td></tr>`; };
+  document.getElementById('eco-heat').innerHTML = `<div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Sube</th><th class="r">Potencia: entrada + pérdidas</th><th class="r">Costo por día</th><th class="r">Por °C al día</th><th class="r">Recuperación</th><th class="r">VAN</th></tr></thead><tbody>${hr('cn')}${hr('tu')}</tbody></table></div>
+    <p class="small" style="margin-top:8px">Potencia = calentar el mineral y el agua que entran cada hora + pérdidas de los tanques abiertos por la superficie (sobre todo evaporación) y por las paredes de acero sin aislar, más el vapor que arrastra el aire de la cianuración. Energía: ${srcTxt}, ${DAYS} días al año (el costo anual está en la tabla de abajo). Las pérdidas usan tablas para aire quieto; con viento o tanques a la intemperie son mayores, y una tapa o aislamiento las reducen. Con la pulpa a temperatura ambiente, «Por °C al día» muestra cuánto costaría subir el primer grado.</p>`;
   // tabla principal
   const sec = t => ['§', t];
   const rows = [
@@ -1700,8 +1732,10 @@ function renderSources(){
       'En tanques agitados no toda la pulpa permanece lo mismo; la distribución gamma da la fracción que sale a cada tiempo. A la salida del tanque i se usa i tanques y τ·i/N.'],
     ['Consumo de reactivo', String.raw`\[ \text{NaCN}=\frac{2\cdot 49{,}01}{196{,}97}\,\frac{\text{ley}\,R}{1000}+k_d\,C\,\frac{L}{S}\,\tau \qquad \text{Tiourea}=a\,C^{1{,}37}\,\frac{L}{S}\,\tau \]`,
       'kg/t. k<sub>d</sub> = 0,00816 h⁻¹ (diseño) o 0,1469 h⁻¹ (California); a = 0,0847, ajustado a 23 kg/t en 10 h con 6 g/L (Carrillo et al.).'],
-    ['Energía de molienda y calentamiento', String.raw`\[ W=10\,W_i\left(\frac{1}{\sqrt{P_{80}}}-\frac{1}{\sqrt{F_{80}}}\right),\qquad \dot Q=(\dot m_s c_{p,s}+\dot m_w c_{p,w})\,\Delta T \]`,
-      'Ley de Bond con W<sub>i</sub> = 15 kWh/t (valor típico, sin ensayo para el distrito) y F<sub>80</sub> = 10 mm. Calentamiento con c<sub>p</sub> 0,8 (mineral) y 4,186 kJ/kg·°C (agua), sin pérdidas de calor.'],
+    ['Energía de molienda', String.raw`\[ W=10\,W_i\left(\frac{1}{\sqrt{P_{80}}}-\frac{1}{\sqrt{F_{80}}}\right) \]`,
+      'Ley de Bond con W<sub>i</sub> = 15 kWh/t (valor típico, sin ensayo para el distrito) y F<sub>80</sub> = 10 mm.'],
+    ['Calentamiento de la pulpa', String.raw`\[ \dot Q=(\dot m_s c_{p,s}+\dot m_w c_{p,w})\,\Delta T+A_{sup}\,q_{sup}(\Delta T)+A_{pared}\,q_{pared}(\Delta T)+\dot m_{aire}\,\Delta x\,h_{fg} \]`,
+      'Calor para la pulpa que entra (c<sub>p</sub> 0,8 y 4,186 kJ/kg·°C) más las pérdidas de los tanques abiertos: q<sub>sup</sub> y q<sub>pared</sub> según las tablas de Engineering ToolBox para superficie de agua y acero sin aislar en aire quieto, y el vapor que arrastra el aire de la cianuración. Electricidad al 100 % o caldera de ACPM al 80 % (35,8 MJ/L).'],
     ['Inversión', String.raw`\[ I=C_{circuito}\left(\frac{V}{V_{ref}}\right)^{0{,}6}+C_{DNP}\left(\frac{\text{t/d}}{40}\right)^{0{,}6}\;(+\ \text{mina}) \]`,
       'Circuito: Tabla 8 del documento × 1,78 (costo directo) × 1,12 (ingeniería) × 1,30 (contingencia); 1,5 veces en tiourea por materiales resistentes al ácido. C<sub>DNP</sub> = COP 2.714 millones de 2021 a TRM 3.743.'],
     ['Flujo de caja e indicadores', String.raw`\[ FC=\text{Ingresos}-\text{Regalías}-\text{Costos}-0{,}35\,(\text{EBITDA}-0{,}1\,I),\quad \mathrm{VAN}=\sum_{t}\frac{FC_t}{(1+i)^{t}} \]`,
