@@ -817,7 +817,15 @@ function alphaOf(m, kt){                              // α tal que g(α) = k·t
 
 // ---------- N tanques iguales en serie: distribución de tiempos gamma ----------
 const LNF = [0]; for (let i=1;i<64;i++) LNF[i] = LNF[i-1]+Math.log(i);
+const PA_CACHE = new Map();   // memoria de resultados ya calculados (mismos argumentos → mismo valor)
 function plantAlpha(m, k, tau, N){
+  const key = m+'|'+k+'|'+tau+'|'+N, hit = PA_CACHE.get(key);
+  if (hit !== undefined) return hit;
+  const v = plantAlphaCalc(m, k, tau, N);
+  if (PA_CACHE.size > 20000) PA_CACHE.clear();
+  PA_CACHE.set(key, v); return v;
+}
+function plantAlphaCalc(m, k, tau, N){
   const steps = 600, tmax = tau*(N===1 ? 9 : Math.max(3, 1+7/Math.sqrt(N))), dt = tmax/steps;
   let s = 0, w = 0;
   for (let i=1;i<=steps;i++){
@@ -1009,7 +1017,7 @@ function economics(route, P, s, E){
   }
   const flows = months.map(x=>x.flow);
   const npv = flows.reduce((a,f,i)=> a + f/Math.pow(1+rm, i+1), 0);
-  const irrM = irrOf([0, ...flows]);
+  const irrM = E.noIrr ? null : irrOf([0, ...flows]);   // noIrr: la curva de precios solo usa el VAN
   const taxYear = months.find(x=>x.tax>0 && x.k>12+build) || months.find(x=>x.tax>0) || {tax:0};
   return { ...A, capexCircuit, capexPlant, capexMine, capex, wc, invest, ramp, full, build, life, nMonths, repl, replTotal, depTotal, closure,
     fullMonthPreTax: full.revenue - full.cost, taxYear: taxYear.tax,
@@ -1022,10 +1030,13 @@ function irrOf(flows){
   let lo = -0.5, hi = 2;
   const flo = f(lo), fhi = f(hi);
   if (!isFinite(flo) || !isFinite(fhi) || flo*fhi > 0) return null;
-  for (let i=0;i<200;i++){ const mid=(lo+hi)/2; if (f(lo)*f(mid) <= 0) hi = mid; else lo = mid; }
+  // misma bisección de 200 pasos: se reutiliza f(lo) y se para cuando el intervalo ya no se puede partir en doble precisión
+  let fl = flo;
+  for (let i=0;i<200;i++){ const mid=(lo+hi)/2; if (mid===lo || mid===hi) break; const fm = f(mid); if (fl*fm <= 0) hi = mid; else { lo = mid; fl = fm; } }
   return (lo+hi)/2;
 }
-function fmt(x, d=0){ if (x===null || x===undefined || !isFinite(x)) return '—'; return x.toLocaleString('es-CO',{minimumFractionDigits:d, maximumFractionDigits:d}); }
+const NF = {};   // formateadores reutilizados: mismo resultado que toLocaleString, sin crear uno nuevo en cada número
+function fmt(x, d=0){ if (x===null || x===undefined || !isFinite(x)) return '—'; return (NF[d] || (NF[d] = new Intl.NumberFormat('es-CO',{minimumFractionDigits:d, maximumFractionDigits:d}))).format(x); }
 
 if (typeof module !== 'undefined') module.exports = { annualBlock, recoveryFor, heatLoad, heatCostPerKWh, simulate, economics, tankProfile, batchCurve, tauFor, krefOf, rinfOf, plantAlpha, alphaOf, gOf, o2Sat, fracCN, pulp, habashi, CAL, MODELS, LAW, PLANT_REF, DAYS };
 
@@ -1686,7 +1697,7 @@ function renderEco(){
   const z = zoneOf(S.zone);
   document.getElementById('eh-amb').textContent = `${z?z.n+' · ':''}temperatura ambiente ${f(S.Tamb,1)} °C`;
   const ckwh = heatCostPerKWh(E), srcTxt = E.heatSource==='acpm' ? `caldera de ACPM a US$ ${f(E.diesel,2)}/galón (80 % de rendimiento)` : `resistencias eléctricas a ${money(E.elec)}/MWh`;
-  const hr = route => { const {P, s, e} = R[route], P0 = {...P, dT:0}, s0 = simulate(route, P0), e0 = economics(route, P0, s0, E), h = s.heatLoad;
+  const hr = route => { const {P, s, e} = R[route], P0 = {...P, dT:0}, s0 = simulate(route, P0), e0 = economics(route, P0, s0, {...E, noIrr:true}), h = s.heatLoad;
     const perDeg = P.dT > 0 ? e.heat/DAYS/P.dT : simulate(route, {...P, dT:1}).heatKW*24*ckwh;
     return `<tr><td style="white-space:nowrap"><span class="dot" style="background:${COL[route]}"></span>${RNAME[route]}</td><td class="r">${f(P.dT,1)} °C</td><td class="r">${f(h.feed,1)} + ${f(h.total-h.feed,1)} = <b>${f(h.total,1)} kW</b></td><td class="r"><b>${money(e.heat/DAYS)}</b></td><td class="r">${money(perDeg)}</td><td class="r">${f(s0.R*100,1)} → ${f(s.R*100,1)} %</td><td class="r">${kmoney(e0.npv)} → ${kmoney(e.npv)}</td></tr>`; };
   document.getElementById('eco-heat').innerHTML = `<div class="tbl-wrap" style="background:none"><table><thead><tr><th>Ruta</th><th class="r">Sube</th><th class="r">Potencia: entrada + pérdidas</th><th class="r">Costo por día</th><th class="r">Por °C al día</th><th class="r">Recuperación</th><th class="r">VAN</th></tr></thead><tbody>${hr('cn')}${hr('tu')}</tbody></table></div>
@@ -1766,7 +1777,7 @@ function renderEco(){
   cc.options.plugins.tooltip.callbacks.title = it => it.length ? (it[0].dataset.label.startsWith('Payback') ? f(it[0].parsed.x,2)+' meses' : 'Mes '+f(it[0].parsed.x,0)) : '';
   cc.update();
   const cp = CH['ch-eco-price'], pr = []; for (let p=1500;p<=6000;p+=150) pr.push(p);
-  cp.data.datasets = ['cn','tu'].map(r=>({label:RNAME[r], borderColor:COL[r], data: pr.map(p=>({x:p, y: economics(r, R[r].P, R[r].s, {...E, price:p}).npv/1e6}))}));
+  cp.data.datasets = ['cn','tu'].map(r=>({label:RNAME[r], borderColor:COL[r], data: pr.map(p=>({x:p, y: economics(r, R[r].P, R[r].s, {...E, price:p, noIrr:true}).npv/1e6}))}));
   cp.data.datasets.push({label:'Precio actual · punto', data:[{x:E.price,y:a.npv/1e6},{x:E.price,y:b.npv/1e6}], borderColor:COL.ink, backgroundColor:'#fff', pointRadius:6, showLine:false});
   cp.data.datasets.push({label:'cero · línea', data:[{x:1500,y:0},{x:6000,y:0}], borderColor:COL.ink, borderWidth:1, borderDash:[4,4]});
   cp.options.scales.x.min = 1500; cp.options.scales.x.max = 6000; cp.update();
